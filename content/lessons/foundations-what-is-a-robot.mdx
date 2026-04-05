@@ -1,0 +1,47 @@
+# What is a Robot?
+
+A robot is not just a machine that moves. A robot is a **physical system that senses the world, makes decisions, and acts on those decisions**. MARS is useful for learning robotics because you can see all three parts happen in one platform: cameras and sensors collect information, onboard software chooses what to do next, and motors move the base or arm.
+
+<Callout type="concept" title="Three-part model">
+When you are unsure whether something is really a robot, ask three questions: what can it sense, how does it decide, and what can it do physically?
+</Callout>
+
+## Robots are embodied
+
+Pure software can make decisions, but it does not have a body in the physical world. A remote-controlled toy can move, but if all of its decisions come from a human operator, its intelligence lives outside the machine. Robots sit in the middle: they connect software to sensors and motors so computation changes what happens in the real world.
+
+## The robot loop
+
+Most robotics systems repeat the same loop:
+
+1. **Sense** what is happening now.
+2. **Decide** what action best fits the goal.
+3. **Act** and change the world.
+4. **Sense again** to see what changed.
+
+That loop might run slowly in a classroom demo or many times per second on a fast robot. The structure stays the same.
+
+> A robot is best understood as a loop, not a single command.
+
+## MARS as an example
+
+MARS can listen for speech, detect objects, estimate distance, move around a room, and position its gripper. That makes it a good teaching platform because the same robot can demonstrate perception, planning, and action without switching tools.
+
+<Callout type="robot-required" title="On the real robot">
+When MARS eventually runs your Blockly programs over a live connection, the code you build here will turn into Python sent to the robot runtime.
+</Callout>
+
+## From blocks to code
+
+The Blockly exercises in this course are not a toy mode. They are a structured way to learn program flow before writing everything manually. As you arrange blocks, you will see the Python update live so the connection between visual logic and code stays obvious.
+
+```python
+robot.say("Hello!")
+robot.move_forward(0.5)
+```
+
+## What you should remember
+
+- A robot combines sensing, decision-making, and physical action.
+- Autonomy exists on a spectrum; some robots are highly autonomous, others only partly.
+- MARS is a teaching robot because it exposes the same core loop used by larger robotic systems.
