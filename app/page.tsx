@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ArrowRight, Camera, Map, Mic } from "lucide-react";
 
-import { useAuthSession } from "@/components/auth/use-auth-session";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,8 +14,7 @@ const buildOutcomes = [
 ];
 
 export default function HomePage() {
-  const { hasSession } = useAuthSession();
-  const primaryHref = hasSession ? "/dashboard" : "/signup";
+  const primaryHref = "/learn";
 
   return (
     <AppShell>

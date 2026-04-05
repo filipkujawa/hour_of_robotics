@@ -1,0 +1,120 @@
+export const toolboxConfig = {
+  kind: "categoryToolbox",
+  contents: [
+    {
+      kind: "category",
+      name: "Movement",
+      colour: "#00b894",
+      contents: [
+        { kind: "block", type: "mars_move_forward" },
+        { kind: "block", type: "mars_move_backward" },
+        { kind: "block", type: "mars_turn" },
+        { kind: "block", type: "mars_stop" },
+        { kind: "block", type: "mars_set_speed" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Arm & Gripper",
+      colour: "#e17055",
+      contents: [
+        { kind: "block", type: "mars_arm_home" },
+        { kind: "block", type: "mars_arm_move_to" },
+        { kind: "block", type: "mars_gripper" },
+        { kind: "block", type: "mars_wave" },
+        { kind: "block", type: "mars_pick_up" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Sensors",
+      colour: "#0984e3",
+      contents: [
+        { kind: "block", type: "mars_get_distance" },
+        { kind: "block", type: "mars_see_object" },
+        { kind: "block", type: "mars_take_photo" },
+        { kind: "block", type: "mars_get_object_position" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Speech",
+      colour: "#fdcb6e",
+      contents: [
+        { kind: "block", type: "mars_say" },
+        { kind: "block", type: "mars_listen" },
+        { kind: "block", type: "mars_set_voice" },
+        { kind: "block", type: "mars_play_sound" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Lights",
+      colour: "#e84393",
+      contents: [
+        { kind: "block", type: "mars_set_led_color" },
+        { kind: "block", type: "mars_led_pattern" },
+        { kind: "block", type: "mars_leds_off" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Timing",
+      colour: "#636e72",
+      contents: [
+        { kind: "block", type: "mars_wait" },
+        { kind: "block", type: "mars_wait_until" },
+      ],
+    },
+    { kind: "sep" },
+    {
+      kind: "category",
+      name: "Logic",
+      colour: "#6c5ce7",
+      contents: [
+        { kind: "block", type: "controls_if" },
+        { kind: "block", type: "controls_if", extraState: { hasElse: true } },
+        { kind: "block", type: "logic_compare" },
+        { kind: "block", type: "logic_operation" },
+        { kind: "block", type: "logic_negate" },
+        { kind: "block", type: "logic_boolean" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Loops",
+      colour: "#00b894",
+      contents: [
+        { kind: "block", type: "controls_repeat_ext" },
+        { kind: "block", type: "controls_whileUntil" },
+        { kind: "block", type: "controls_for" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Math",
+      colour: "#0984e3",
+      contents: [
+        { kind: "block", type: "math_number" },
+        { kind: "block", type: "math_arithmetic" },
+        { kind: "block", type: "math_random_int" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Text",
+      colour: "#0984e3",
+      contents: [
+        { kind: "block", type: "text" },
+        { kind: "block", type: "text_join" },
+        { kind: "block", type: "text_print" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "Variables",
+      colour: "#e84393",
+      custom: "VARIABLE",
+    },
+  ],
+};

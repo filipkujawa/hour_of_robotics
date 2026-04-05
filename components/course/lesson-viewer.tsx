@@ -42,17 +42,6 @@ export function LessonViewer({
     setFurthestStepIndex(0);
   }, [lessonKey, setLesson]);
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && currentStep !== "pretest") {
-        setStep("pretest");
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [currentStep, setStep]);
-
   const flatLessons = useMemo(() => chapters.flatMap((entry) => entry.lessons), []);
   const lessonIndex = flatLessons.findIndex((entry) => entry.id === lesson.id);
   const nextLesson = lessonIndex >= 0 ? flatLessons[lessonIndex + 1] ?? null : null;
@@ -60,6 +49,16 @@ export function LessonViewer({
 
   if (completed) {
     return <LessonCompletion lesson={lesson} nextLesson={nextLesson} chapterCompleted={chapterCompleted} />;
+  }
+
+  // Exercise step: render full-screen, no wrapper, no header, no padding
+  if (currentStep === "exercise") {
+    return (
+      <BlocklyWorkspace
+        exercise={lesson.exercise}
+        onComplete={() => setCompleted(true)}
+      />
+    );
   }
 
   return (
@@ -77,8 +76,8 @@ export function LessonViewer({
           </div>
           <h1 className="mt-1 font-display text-2xl tracking-tight text-text sm:text-3xl">{lesson.title}</h1>
         </div>
-        <Link href="/dashboard" className="shrink-0 text-sm text-muted transition hover:text-text">
-          Exit to dashboard
+        <Link href="/learn" className="shrink-0 text-sm text-muted transition hover:text-text">
+          Back to curriculum
         </Link>
       </div>
 
@@ -93,11 +92,7 @@ export function LessonViewer({
               <button
                 key={step.id}
                 type="button"
-                onClick={() => {
-                  if (available) {
-                    setStep(step.id);
-                  }
-                }}
+                onClick={() => { if (available) setStep(step.id); }}
                 className={`group flex min-w-[180px] items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${
                   active ? "border-primary/20 bg-tintSoft" : "border-border/70 bg-white hover:bg-surface"
                 }`}
@@ -107,10 +102,7 @@ export function LessonViewer({
                   <motion.div
                     layout={false}
                     initial={false}
-                    animate={{
-                      opacity: active || completedStep ? 1 : 0,
-                      scale: active ? 1 : 0.92
-                    }}
+                    animate={{ opacity: active || completedStep ? 1 : 0, scale: active ? 1 : 0.92 }}
                     className="absolute inset-0 rounded-full bg-tintSoft"
                   />
                   <span className="relative z-10 grid h-full place-items-center text-xs font-medium text-text">{index + 1}</span>
@@ -131,8 +123,8 @@ export function LessonViewer({
         {currentStep === "pretest" ? (
           <PretestStep
             pretest={lesson.pretest}
-            onContinue={(_answerId) => {
-              setFurthestStepIndex((value) => Math.max(value, 1));
+            onContinue={() => {
+              setFurthestStepIndex((v) => Math.max(v, 1));
               startTransition(() => setStep("learn"));
             }}
           />
@@ -147,12 +139,7 @@ export function LessonViewer({
                   Focus on the lesson content first, then continue to the exercise when you are ready to apply it.
                 </p>
               </div>
-              <Button
-                onClick={() => {
-                  setFurthestStepIndex((value) => Math.max(value, 2));
-                  setStep("exercise");
-                }}
-              >
+              <Button onClick={() => { setFurthestStepIndex((v) => Math.max(v, 2)); setStep("exercise"); }}>
                 Continue to exercise
               </Button>
             </div>
@@ -160,15 +147,6 @@ export function LessonViewer({
               {renderedContent}
             </article>
           </div>
-        ) : null}
-
-        {currentStep === "exercise" ? (
-          <BlocklyWorkspace
-            exercise={lesson.exercise}
-            onComplete={() => {
-              setCompleted(true);
-            }}
-          />
         ) : null}
       </motion.div>
     </div>

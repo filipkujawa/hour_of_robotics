@@ -14,39 +14,17 @@ export function isLessonCompleted(progress: LessonProgressRecord[] | undefined, 
 }
 
 export function isLessonUnlocked(
-  role: Role,
-  lesson: Lesson,
-  progress: LessonProgressRecord[] | undefined
+  _role: Role,
+  _lesson: Lesson,
+  _progress: LessonProgressRecord[] | undefined
 ) {
-  if (role === "teacher") {
-    return true;
-  }
-
-  const chapter = chapters.find((item) => item.slug === lesson.chapterSlug);
-  if (!chapter) {
-    return false;
-  }
-
-  if (chapter.number === 1 && lesson.lessonNumber === 1) {
-    return true;
-  }
-
-  if (lesson.lessonNumber > 1) {
-    const previousLesson = chapter.lessons[lesson.lessonNumber - 2];
-    return isLessonCompleted(progress, previousLesson.id);
-  }
-
-  const previousChapter = chapters[chapter.number - 2];
-  return previousChapter.lessons.every((entry) => isLessonCompleted(progress, entry.id));
+  // All lessons unlocked — no account required
+  return true;
 }
 
-export function isChapterUnlocked(role: Role, chapter: Chapter, progress: LessonProgressRecord[] | undefined) {
-  if (role === "teacher" || chapter.number === 1) {
-    return true;
-  }
-
-  const previousChapter = chapters[chapter.number - 2];
-  return previousChapter.lessons.every((entry) => isLessonCompleted(progress, entry.id));
+export function isChapterUnlocked(_role: Role, _chapter: Chapter, _progress: LessonProgressRecord[] | undefined) {
+  // All chapters unlocked — no account required
+  return true;
 }
 
 export function chapterCompletion(chapter: Chapter, progress: LessonProgressRecord[] | undefined) {

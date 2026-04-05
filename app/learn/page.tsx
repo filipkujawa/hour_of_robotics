@@ -4,7 +4,7 @@ import { chapters, type Role } from "@/lib/course-data";
 import { mockProgress } from "@/lib/mock-progress";
 
 export default function LearnPage() {
-  const role: Role = "student";
+  const role: Role = "teacher";
 
   return (
     <AppShell>

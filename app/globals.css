@@ -27,6 +27,8 @@ body {
   border-color: #e5e3de;
 }
 
+/* ── MDX prose ── */
+
 .prose-lesson [data-rehype-pretty-code-figure] {
   margin: 1.5rem 0;
 }
@@ -57,30 +59,207 @@ body {
   animation: shimmer 2.2s linear infinite;
 }
 
+/* ── Blockly Toolbox ── */
+
+.blocklyToolboxDiv {
+  background-color: #f5f3ef !important;
+  border-right: 1px solid #e2e1de !important;
+  padding: 6px 0 !important;
+  width: 150px !important;
+}
+
+.blocklyTreeRow {
+  height: auto !important;
+  padding: 7px 10px 7px 12px !important;
+  margin: 1px 5px !important;
+  border-radius: 6px !important;
+  line-height: 1 !important;
+  transition: background-color 0.08s ease !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.blocklyTreeRow:not(.blocklyTreeSelected):hover {
+  background-color: #eeece7 !important;
+}
+
+.blocklyTreeSelected {
+  background-color: #e8e5df !important;
+}
+
+.blocklyTreeLabel {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
+  color: #6b6b69 !important;
+  fill: #6b6b69 !important;
+}
+
+.blocklyTreeRow:hover .blocklyTreeLabel {
+  color: #1a1a19 !important;
+  fill: #1a1a19 !important;
+}
+
+.blocklyTreeSelected .blocklyTreeLabel {
+  color: #1a1a19 !important;
+  fill: #1a1a19 !important;
+  font-weight: 600 !important;
+}
+
+.blocklyTreeIcon,
+.blocklyTreeIconOpen,
+.blocklyTreeIconClosed,
+.blocklyTreeIconNone {
+  display: none !important;
+}
+
+.blocklyTreeRowContentContainer {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.blocklyToolboxDiv .blocklyTreeSeparator {
+  height: 1px !important;
+  margin: 4px 10px !important;
+  background-color: #e2e1de !important;
+  border: none !important;
+}
+
+/* ── Blockly Flyout ── */
+
+.blocklyFlyoutBackground {
+  fill: #f0efed !important;
+  fill-opacity: 0.98 !important;
+}
+
+.blocklyFlyoutLabelText {
+  fill: #1a1a19 !important;
+  font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
+  font-size: 12px !important;
+}
+
+/* ── Blockly Workspace ── */
+
 .blocklyMainBackground {
-  stroke: rgba(122, 116, 139, 0.16) !important;
-}
-
-.blocklyToolboxDiv,
-.blocklyFlyout,
-.blocklyScrollbarBackground {
-  background: #171224 !important;
-}
-
-.blocklyTreeLabel,
-.blocklyFlyoutLabelText,
-.blocklyText {
-  fill: #f5f3ff !important;
-}
-
-.blocklyTooltipDiv {
-  border: 1px solid rgba(229, 227, 222, 0.2) !important;
-  border-radius: 16px !important;
-  background: rgba(23, 18, 36, 0.98) !important;
-  color: #f5f3ff !important;
-  box-shadow: 0 18px 50px -30px rgba(0, 0, 0, 0.45) !important;
+  fill: #fafaf9 !important;
+  stroke: none !important;
 }
 
 .blocklySvg {
-  border-radius: 1.5rem;
+  border-radius: 0 !important;
+}
+
+.blocklyTrash image {
+  opacity: 0.2;
+}
+.blocklyTrash:hover image {
+  opacity: 0.5;
+}
+
+.blocklyScrollbarHandle {
+  fill: #d4d3d0 !important;
+  rx: 3 !important;
+}
+
+.blocklyScrollbarBackground {
+  fill: transparent !important;
+}
+
+.blocklyZoom image {
+  opacity: 0.3;
+}
+.blocklyZoom image:hover {
+  opacity: 0.6;
+}
+
+/* ── Block text ── */
+
+.blocklyText {
+  font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
+  font-size: 12px !important;
+  fill: white !important;
+}
+
+.blocklyDropdownText {
+  font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
+}
+
+/* ── Dropdowns & Menus ── */
+
+.blocklyDropDownDiv {
+  border: 1px solid #e2e1de !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+.blocklyMenu {
+  background: white !important;
+  border-radius: 8px !important;
+  padding: 4px !important;
+}
+
+.blocklyMenuItem {
+  color: #1a1a19 !important;
+  padding: 6px 12px !important;
+  border-radius: 4px !important;
+  font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
+  font-size: 12px !important;
+}
+
+.blocklyMenuItemHighlight {
+  background-color: #f5f3ef !important;
+}
+
+.blocklyContextMenu {
+  background: white !important;
+  border: 1px solid #e2e1de !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── Input fields ── */
+
+.blocklyWidgetDiv input,
+.blocklyWidgetDiv textarea {
+  background: white !important;
+  color: #1a1a19 !important;
+  border: 2px solid #d97706 !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  font-family: var(--font-jetbrains-mono), monospace !important;
+}
+
+/* ── Tooltip ── */
+
+.blocklyTooltipDiv {
+  border: 1px solid #e2e1de !important;
+  border-radius: 8px !important;
+  background: white !important;
+  color: #1a1a19 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
+  font-size: 12px !important;
+  padding: 6px 10px !important;
+}
+
+/* ── Scrollbar ── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d3d0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b5b5b2;
 }
