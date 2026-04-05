@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Camera, Map, Mic, Cpu, Hand, Brain } from "lucide-react";
+import dynamic from "next/dynamic";
+import { ArrowRight, Camera, Hand, Brain } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+
+const BlocksCodeSlider = dynamic(
+  () => import("@/components/home/blocks-code-slider").then((m) => m.BlocksCodeSlider),
+  { ssr: false, loading: () => <div className="h-[380px] rounded-xl border border-[#e2e1de] bg-[#fafaf9] animate-pulse" /> }
+);
 
 const features = [
   { title: "Sense", description: "Camera, LiDAR, depth sensing, and microphone input.", icon: Camera },
@@ -11,75 +17,89 @@ const features = [
   { title: "Decide", description: "State machines, conditionals, and LLM reasoning.", icon: Brain },
 ];
 
-const stats = [
-  { value: "7", label: "Chapters" },
-  { value: "40+", label: "Lessons" },
-  { value: "0", label: "Prerequisites" },
-];
-
 export default function HomePage() {
   return (
     <AppShell>
-      {/* Hero */}
+      {/* Hero — text left, video right */}
       <section className="mx-auto max-w-6xl px-6 pt-20 pb-16">
-        <div className="max-w-2xl">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d97706]">
-            Hour of Robotics
-          </div>
-          <h1 className="mt-4 text-[42px] font-bold leading-[1.1] tracking-tight text-[#1a1a19]">
-            Learn robotics<br />from zero to one.
-          </h1>
-          <p className="mt-5 text-[15px] leading-7 text-[#6b6b69] max-w-lg">
-            A block-based curriculum that takes high school students from their first robot command to building autonomous behaviors with the Innate MARS robot.
-          </p>
-          <div className="mt-8 flex items-center gap-3">
-            <Link
-              href="/learn"
-              className="inline-flex items-center gap-2 rounded-md bg-[#1a1a19] px-5 py-2.5 text-[13px] font-medium text-white hover:bg-[#333332] transition"
-            >
-              Start Learning
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            <Link
-              href="/learn"
-              className="inline-flex items-center rounded-md border border-[#e2e1de] bg-white px-5 py-2.5 text-[13px] font-medium text-[#1a1a19] hover:bg-[#fafaf9] transition"
-            >
-              View curriculum
-            </Link>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-14 flex gap-10">
-          {stats.map((s) => (
-            <div key={s.label}>
-              <div className="text-[28px] font-bold text-[#1a1a19] tracking-tight">{s.value}</div>
-              <div className="text-[11px] text-[#9c9c9a] font-medium uppercase tracking-[0.1em]">{s.label}</div>
+        <div className="grid lg:grid-cols-[1fr_1fr] gap-12 items-center">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d97706]">
+              Hour of Robotics
             </div>
-          ))}
+            <h1 className="mt-4 text-[42px] font-bold leading-[1.1] tracking-tight text-[#1a1a19]">
+              Learn robotics<br />from zero to one.
+            </h1>
+            <p className="mt-5 text-[15px] leading-7 text-[#6b6b69] max-w-lg">
+              A block-based curriculum that takes high school students from their first robot command to building autonomous behaviors with the Innate MARS robot.
+            </p>
+            <div className="mt-8 flex items-center gap-3">
+              <Link
+                href="/learn"
+                className="inline-flex items-center gap-2 rounded-md bg-[#1a1a19] px-5 py-2.5 text-[13px] font-medium text-white hover:bg-[#333332] transition"
+              >
+                Start Learning
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <Link
+                href="/learn"
+                className="inline-flex items-center rounded-md border border-[#e2e1de] bg-white px-5 py-2.5 text-[13px] font-medium text-[#1a1a19] hover:bg-[#fafaf9] transition"
+              >
+                View curriculum
+              </Link>
+            </div>
+
+            {/* Stats */}
+            <div className="mt-12 flex gap-10">
+              {[
+                { value: "7", label: "Chapters" },
+                { value: "40+", label: "Lessons" },
+                { value: "0", label: "Prerequisites" },
+              ].map((s) => (
+                <div key={s.label}>
+                  <div className="text-[28px] font-bold text-[#1a1a19] tracking-tight">{s.value}</div>
+                  <div className="text-[11px] text-[#9c9c9a] font-medium uppercase tracking-[0.1em]">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Video */}
+          <div className="relative overflow-hidden rounded-xl border border-[#e2e1de] bg-[#0D1726]">
+            <video
+              className="aspect-[4/3] w-full object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+            >
+              <source src="https://assets.tina.io/35da1824-072c-49aa-976b-db509bc0db80/videos/Complete-compressed.mp4" type="video/mp4" />
+            </video>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0D1726]/60 via-transparent to-transparent" />
+            <div className="absolute bottom-4 left-5">
+              <span className="text-[10px] uppercase tracking-[0.15em] text-white/60 font-medium">
+                MARS in motion
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Video */}
-      <section className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="relative overflow-hidden rounded-xl border border-[#e2e1de] bg-[#0D1726]">
-          <video
-            className="aspect-[21/9] w-full object-cover"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-          >
-            <source src="https://assets.tina.io/35da1824-072c-49aa-976b-db509bc0db80/videos/Complete-compressed.mp4" type="video/mp4" />
-          </video>
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0D1726]/60 via-transparent to-transparent" />
-          <div className="absolute bottom-4 left-5">
-            <span className="text-[10px] uppercase tracking-[0.15em] text-white/60 font-medium">
-              MARS in motion
-            </span>
+      {/* Blocks ↔ Code slider */}
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="mb-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d97706]">
+            How it works
           </div>
+          <h2 className="mt-2 text-[24px] font-bold tracking-tight text-[#1a1a19]">
+            Drag blocks, see real Python
+          </h2>
+          <p className="mt-2 text-[13px] text-[#6b6b69]">
+            Click the toggle to flip between the visual blocks and the Python code they generate.
+          </p>
         </div>
+        <BlocksCodeSlider />
       </section>
 
       {/* Sense / Act / Decide */}

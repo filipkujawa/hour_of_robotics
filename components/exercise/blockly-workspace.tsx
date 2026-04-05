@@ -18,7 +18,7 @@ import { RobotConsole } from "./robot-console";
 import { ConnectDialog } from "./connect-dialog";
 import { MarsChat } from "./mars-chat";
 
-let registered = false;
+const g = globalThis as unknown as { __blocksRegistered?: boolean };
 
 type LeftPanel = "exercise" | "chat";
 
@@ -52,10 +52,10 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
   useEffect(() => {
     if (!hostRef.current || workspaceRef.current) return;
 
-    if (!registered) {
+    if (!g.__blocksRegistered) {
       registerAllBlocks();
       registerAllGenerators();
-      registered = true;
+      g.__blocksRegistered = true;
     }
 
     const workspace = Blockly.inject(hostRef.current, {
