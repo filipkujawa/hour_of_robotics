@@ -21,6 +21,7 @@
     "react-dom": "^18.3.1",
     "rehype-pretty-code": "^0.14.1",
     "remark-gfm": "^4.0.1",
+    "roslib": "^2.1.0",
     "sonner": "^1.7.4",
     "zustand": "^5.0.3"
   },

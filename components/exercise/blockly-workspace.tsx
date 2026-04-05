@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as Blockly from "blockly";
-import { toast } from "sonner";
-import { CheckCircle2, ChevronLeft, ChevronRight, Code2, Lightbulb, Play } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Code2, Lightbulb, Play, Square, Terminal, Wifi } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Exercise } from "@/lib/course-data";
 import { useLessonStore } from "@/lib/store/lesson-store";
+import { useRobot } from "@/lib/robot";
+import { RobotConsole } from "./robot-console";
+import { ConnectDialog } from "./connect-dialog";
 
 const toolbox = {
   kind: "categoryToolbox",
@@ -304,11 +306,23 @@ export function BlocklyWorkspace({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
   const [pythonOpen, setPythonOpen] = useState(true);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const setWorkspaceXml = useLessonStore((state) => state.setWorkspaceXml);
   const setGeneratedPython = useLessonStore((state) => state.setGeneratedPython);
   const workspaceXml = useLessonStore((state) => state.workspaceXml);
   const generatedPython = useLessonStore((state) => state.generatedPython);
+
+  const {
+    status: connectionStatus,
+    isRunning,
+    logs,
+    connect,
+    disconnect,
+    runWorkspace,
+    stopExecution,
+    clearLogs,
+  } = useRobot();
 
   useEffect(() => {
     ensureBlocksDefined();
@@ -421,19 +435,67 @@ export function BlocklyWorkspace({
           </div>
           <div className="border-t border-[#ddd6cb] p-4">
             <div className="grid gap-2">
-              <Button
-                className="gap-2"
-                onClick={() => {
-                  toast("Robot connection coming soon.");
-                  // TODO: WebSocket robot execution architecture:
-                  // Connect to ws://[robot-ip]:8765
-                  // Send generated Python as JSON payload { code: "...", lessonId: "...", userId: "..." }
-                  // Stream stdout / stderr messages back into the exercise console in real time.
-                }}
+              {/* Connection button */}
+              <button
+                type="button"
+                onClick={() => setConnectOpen(true)}
+                className="flex items-center gap-2 rounded-xl border border-[#e1d9cc] bg-white px-3 py-2 text-xs text-[#746657] transition hover:bg-[#f8f5ef]"
               >
-                <Play className="h-4 w-4" />
-                Run on MARS
-              </Button>
+                <div
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    connectionStatus === "connected"
+                      ? "bg-green-500"
+                      : connectionStatus === "connecting"
+                        ? "animate-pulse bg-amber-500"
+                        : "bg-[#c4b9a8]"
+                  }`}
+                />
+                <Wifi className="h-3 w-3" />
+                {connectionStatus === "connected"
+                  ? "Connected"
+                  : connectionStatus === "connecting"
+                    ? "Connecting..."
+                    : "Connect to MARS"}
+              </button>
+
+              {/* Run / Stop */}
+              {!isRunning ? (
+                <Button
+                  className="gap-2"
+                  onClick={() => {
+                    if (connectionStatus !== "connected") {
+                      setConnectOpen(true);
+                      return;
+                    }
+                    if (workspaceRef.current) {
+                      setConsoleOpen(true);
+                      runWorkspace(workspaceRef.current);
+                    }
+                  }}
+                >
+                  <Play className="h-4 w-4" />
+                  Run on MARS
+                </Button>
+              ) : (
+                <Button
+                  className="gap-2 bg-red-600 hover:bg-red-700"
+                  onClick={stopExecution}
+                >
+                  <Square className="h-3.5 w-3.5" />
+                  Stop
+                </Button>
+              )}
+
+              {/* Console toggle */}
+              <button
+                type="button"
+                onClick={() => setConsoleOpen(!consoleOpen)}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-[#e1d9cc] bg-white px-3 py-2 text-xs text-[#746657] transition hover:bg-[#f8f5ef]"
+              >
+                <Terminal className="h-3 w-3" />
+                Console{logs.length > 0 ? ` (${logs.length})` : ""}
+              </button>
+
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -451,12 +513,23 @@ export function BlocklyWorkspace({
             <div className="flex items-center justify-between border-b border-[#e7dfd3] px-4 py-3">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b45309]">Coding Area</div>
-                <div className="mt-1 text-sm text-[#746657]">Temporary workspace mockup for Blockly.</div>
+                <div className="mt-1 text-sm text-[#746657]">Drag blocks to program MARS.</div>
               </div>
+              {isRunning && (
+                <div className="flex items-center gap-2 text-xs text-green-600">
+                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
+                  Running...
+                </div>
+              )}
             </div>
-            <div className="min-h-0 flex-1 bg-[#fdfcf9] p-0">
+            <div className={`min-h-0 bg-[#fdfcf9] p-0 ${consoleOpen ? "flex-[2]" : "flex-1"}`}>
               <div ref={hostRef} className="h-full w-full bg-white" />
             </div>
+            {consoleOpen && (
+              <div className="h-[180px] flex-shrink-0 border-t border-[#e7dfd3] p-2">
+                <RobotConsole logs={logs} onClear={clearLogs} />
+              </div>
+            )}
           </div>
         </section>
 
@@ -501,6 +574,14 @@ export function BlocklyWorkspace({
           </p>
         </div>
       </div>
+
+      <ConnectDialog
+        isOpen={connectOpen}
+        status={connectionStatus}
+        onConnect={(url) => connect(url)}
+        onDisconnect={disconnect}
+        onClose={() => setConnectOpen(false)}
+      />
     </div>
   );
 }
