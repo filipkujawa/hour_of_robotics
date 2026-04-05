@@ -66,6 +66,7 @@ body {
   border-right: 1px solid #e2e1de !important;
   padding: 6px 0 !important;
   width: 150px !important;
+  z-index: 1 !important;
 }
 
 .blocklyTreeRow {
