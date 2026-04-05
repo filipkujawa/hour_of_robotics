@@ -2,8 +2,17 @@ import { notFound } from "next/navigation";
 
 import { LessonViewer } from "@/components/course/lesson-viewer";
 import { getLessonContent } from "@/lib/content";
-import { getChapterBySlug } from "@/lib/course-data";
+import { getAllLessons, getChapterBySlug } from "@/lib/course-data";
 import { renderLessonMdx } from "@/lib/mdx";
+
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return getAllLessons().map((lesson) => ({
+    chapterSlug: lesson.chapterSlug,
+    lessonSlug: lesson.slug
+  }));
+}
 
 export default async function LessonPage({
   params
