@@ -131,7 +131,7 @@ export function LessonViewer({
         {currentStep === "pretest" ? (
           <PretestStep
             pretest={lesson.pretest}
-            onContinue={() => {
+            onContinue={(_answerId) => {
               setFurthestStepIndex((value) => Math.max(value, 1));
               startTransition(() => setStep("learn"));
             }}
