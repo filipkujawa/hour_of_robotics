@@ -1,9 +1,9 @@
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border/70 bg-white">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>Hour of Robotics is a focused learning environment for robotics with the Innate MARS platform.</p>
-        <p>Built for classrooms, labs, and students learning from zero.</p>
+    <footer className="border-t border-[#e2e1de]">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 text-[11px] text-[#9c9c9a]">
+        <p>Hour of Robotics — Learn robotics with Innate MARS</p>
+        <p>Built for RoboHacks 2026</p>
       </div>
     </footer>
   );

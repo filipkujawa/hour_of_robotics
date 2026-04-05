@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, LockKeyhole } from "lucide-react";
+import { CheckCircle2, ChevronRight } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import type { Chapter, Lesson, Role } from "@/lib/course-data";
 import type { LessonProgressRecord } from "@/lib/unlocks";
 import { chapterCompletion, isLessonCompleted, isLessonUnlocked } from "@/lib/unlocks";
@@ -10,7 +9,7 @@ import { formatMinutes } from "@/lib/utils";
 export function LessonList({
   chapter,
   progress,
-  role
+  role,
 }: {
   chapter: Chapter;
   progress: LessonProgressRecord[];
@@ -19,24 +18,26 @@ export function LessonList({
   const completion = chapterCompletion(chapter, progress);
 
   return (
-    <section className="rounded-[32px] border border-border bg-white p-6 shadow-card">
-      <div className="flex flex-col gap-4 border-b border-border/70 pb-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
+    <section className="rounded-xl border border-[#e2e1de] bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0efed]">
+        <div className="flex items-center gap-3">
           <div
-            className="h-11 w-11 rounded-2xl"
-            style={{ backgroundColor: `${chapter.color}20`, boxShadow: `inset 0 0 0 1px ${chapter.color}25` }}
-          />
+            className="w-8 h-8 rounded-md flex items-center justify-center text-[11px] font-bold text-white"
+            style={{ backgroundColor: chapter.color }}
+          >
+            {chapter.number}
+          </div>
           <div>
-            <div className="text-sm text-muted">Chapter {chapter.number}</div>
-            <h2 className="font-display text-3xl tracking-tight text-text">{chapter.title}</h2>
+            <div className="text-[10px] text-[#9c9c9a] font-medium">Chapter {chapter.number}</div>
+            <h2 className="text-[15px] font-semibold text-[#1a1a19]">{chapter.title}</h2>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Badge>{completion.completed}/{completion.total} complete</Badge>
-          <Badge>{formatMinutes(chapter.lessons.reduce((total, lesson) => total + lesson.estimatedMinutes, 0))}</Badge>
+        <div className="flex items-center gap-3 text-[11px] text-[#9c9c9a]">
+          <span>{completion.completed}/{completion.total} done</span>
+          <span>{formatMinutes(chapter.lessons.reduce((t, l) => t + l.estimatedMinutes, 0))}</span>
         </div>
       </div>
-      <div className="divide-y divide-border/70">
+      <div className="divide-y divide-[#f5f3ef]">
         {chapter.lessons.map((lesson) => (
           <LessonRow key={lesson.id} lesson={lesson} progress={progress} role={role} />
         ))}
@@ -48,7 +49,7 @@ export function LessonList({
 function LessonRow({
   lesson,
   progress,
-  role
+  role,
 }: {
   lesson: Lesson;
   progress: LessonProgressRecord[];
@@ -56,35 +57,33 @@ function LessonRow({
 }) {
   const completed = isLessonCompleted(progress, lesson.id);
   const unlocked = isLessonUnlocked(role, lesson, progress);
-  const content = (
-    <div className="group flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
-      <div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-muted">{lesson.chapterNumber}.{lesson.lessonNumber}</div>
-          <h3 className="text-lg font-medium text-text">{lesson.title}</h3>
-          {completed ? (
-            <CheckCircle2 className="h-4 w-4 text-primary" />
-          ) : !unlocked ? (
-            <LockKeyhole className="h-4 w-4 text-muted" />
-          ) : null}
-        </div>
-        <p className="mt-2 max-w-3xl text-sm leading-7 text-muted">{lesson.summary}</p>
-      </div>
-      <div className="flex items-center gap-4 text-sm">
-        <Badge>{formatMinutes(lesson.estimatedMinutes)}</Badge>
-        <span className="inline-flex items-center gap-1 text-muted">
-          {completed ? "Complete" : unlocked ? "Open lesson" : "Locked"}
-          {unlocked ? <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" /> : null}
+
+  const inner = (
+    <div className="group flex items-center justify-between px-5 py-3.5 transition hover:bg-[#fafaf9]">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-[11px] text-[#d4d3d0] font-mono w-6 flex-shrink-0">
+          {lesson.chapterNumber}.{lesson.lessonNumber}
         </span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-medium text-[#1a1a19] truncate">{lesson.title}</span>
+            {completed && <CheckCircle2 className="h-3.5 w-3.5 text-[#d97706] flex-shrink-0" />}
+          </div>
+          <p className="text-[11px] text-[#9c9c9a] mt-0.5 truncate max-w-lg">{lesson.summary}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <span className="text-[11px] text-[#d4d3d0]">{formatMinutes(lesson.estimatedMinutes)}</span>
+        {unlocked && <ChevronRight className="h-3.5 w-3.5 text-[#d4d3d0] group-hover:text-[#9c9c9a] transition" />}
       </div>
     </div>
   );
 
   return unlocked ? (
     <Link href={`/learn/${lesson.chapterSlug}/${lesson.slug}`} className="block">
-      {content}
+      {inner}
     </Link>
   ) : (
-    content
+    inner
   );
 }

@@ -3,36 +3,34 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronLeft, BookOpen, FlaskConical, Code2 } from "lucide-react";
 
 import { LessonCompletion } from "@/components/course/lesson-completion";
 import { PretestStep } from "@/components/course/pretest-step";
 import { BlocklyWorkspace } from "@/components/exercise/blockly-workspace";
-import { Button } from "@/components/ui/button";
 import type { Chapter, Lesson, LessonStep } from "@/lib/course-data";
 import { chapters } from "@/lib/course-data";
 import { useLessonStore } from "@/lib/store/lesson-store";
 
-const steps: { id: LessonStep; label: string }[] = [
-  { id: "pretest", label: "Pre-test" },
-  { id: "learn", label: "Learn" },
-  { id: "exercise", label: "Exercise" }
+const stepsMeta: { id: LessonStep; label: string; icon: typeof BookOpen }[] = [
+  { id: "pretest", label: "Pre-test", icon: FlaskConical },
+  { id: "learn", label: "Learn", icon: BookOpen },
+  { id: "exercise", label: "Exercise", icon: Code2 },
 ];
 
 export function LessonViewer({
   chapter,
   lesson,
-  renderedContent
+  renderedContent,
 }: {
   chapter: Chapter;
   lesson: Lesson;
   renderedContent: ReactNode;
 }) {
   const lessonKey = `${chapter.slug}/${lesson.slug}`;
-  const currentStep = useLessonStore((state) => state.currentStep);
-  const setLesson = useLessonStore((state) => state.setLesson);
-  const setStep = useLessonStore((state) => state.setStep);
+  const currentStep = useLessonStore((s) => s.currentStep);
+  const setLesson = useLessonStore((s) => s.setLesson);
+  const setStep = useLessonStore((s) => s.setStep);
   const [completed, setCompleted] = useState(false);
   const [furthestStepIndex, setFurthestStepIndex] = useState(0);
   const [, startTransition] = useTransition();
@@ -42,8 +40,8 @@ export function LessonViewer({
     setFurthestStepIndex(0);
   }, [lessonKey, setLesson]);
 
-  const flatLessons = useMemo(() => chapters.flatMap((entry) => entry.lessons), []);
-  const lessonIndex = flatLessons.findIndex((entry) => entry.id === lesson.id);
+  const flatLessons = useMemo(() => chapters.flatMap((e) => e.lessons), []);
+  const lessonIndex = flatLessons.findIndex((e) => e.id === lesson.id);
   const nextLesson = lessonIndex >= 0 ? flatLessons[lessonIndex + 1] ?? null : null;
   const chapterCompleted = nextLesson ? nextLesson.chapterSlug !== lesson.chapterSlug : true;
 
@@ -51,76 +49,64 @@ export function LessonViewer({
     return <LessonCompletion lesson={lesson} nextLesson={nextLesson} chapterCompleted={chapterCompleted} />;
   }
 
-  // Exercise step: render full-screen, no wrapper, no header, no padding
+  // Exercise: full-screen workspace (its own layout)
   if (currentStep === "exercise") {
-    return (
-      <BlocklyWorkspace
-        exercise={lesson.exercise}
-        onComplete={() => setCompleted(true)}
-      />
-    );
+    return <BlocklyWorkspace exercise={lesson.exercise} onComplete={() => setCompleted(true)} />;
   }
 
+  const currentStepIndex = stepsMeta.findIndex((s) => s.id === currentStep);
+
   return (
-    <div className="mx-auto max-w-[1480px] px-4 py-3 sm:px-6">
-      <div className="mb-3 flex flex-col gap-2 border-b border-border/70 pb-3 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted sm:text-sm">
-            <Link href="/learn" className="transition hover:text-text">
-              Course
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span>{chapter.title}</span>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span className="truncate text-text">{lesson.title}</span>
+    <div className="h-screen w-screen fixed inset-0 z-50 flex flex-col bg-[#f5f5f4] text-[#1a1a19] overflow-hidden">
+      {/* ── Top bar ── */}
+      <header className="h-11 flex items-center justify-between px-4 bg-white border-b border-[#e2e1de] flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <Link href="/learn" className="flex items-center gap-1.5 text-[11px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors">
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Back
+          </Link>
+          <div className="h-4 w-px bg-[#e2e1de]" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-[#9c9c9a]">{chapter.title}</span>
+            <ChevronLeft className="h-3 w-3 text-[#d4d3d0] rotate-180" />
+            <span className="text-[12px] font-semibold text-[#1a1a19] truncate max-w-[240px]">{lesson.title}</span>
           </div>
-          <h1 className="mt-1 font-display text-2xl tracking-tight text-text sm:text-3xl">{lesson.title}</h1>
         </div>
-        <Link href="/learn" className="shrink-0 text-sm text-muted transition hover:text-text">
-          Back to curriculum
-        </Link>
-      </div>
 
-      <div className="mb-4 overflow-x-auto border-b border-border/70 pb-3">
-        <div className="flex min-w-max gap-2">
-          {steps.map((step, index) => {
-            const active = currentStep === step.id;
-            const completedStep = steps.findIndex((entry) => entry.id === currentStep) > index;
-            const available = index <= furthestStepIndex;
+        <div className="flex items-center gap-2">
+          {/* Step tabs */}
+          <nav className="flex items-center gap-0.5 bg-[#f0efed] rounded-md p-0.5">
+            {stepsMeta.map((step, index) => {
+              const active = currentStep === step.id;
+              const available = index <= furthestStepIndex;
+              const Icon = step.icon;
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => { if (available) setStep(step.id); }}
+                  disabled={!available}
+                  className={`text-[11px] font-medium px-3 py-1 rounded transition-all flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed ${
+                    active ? "bg-white text-[#1a1a19] shadow-sm" : "text-[#9c9c9a] hover:text-[#6b6b69]"
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {step.label}
+                </button>
+              );
+            })}
+          </nav>
 
-            return (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => { if (available) setStep(step.id); }}
-                className={`group flex min-w-[180px] items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${
-                  active ? "border-primary/20 bg-tintSoft" : "border-border/70 bg-white hover:bg-surface"
-                }`}
-                disabled={!available}
-              >
-                <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-border bg-surface">
-                  <motion.div
-                    layout={false}
-                    initial={false}
-                    animate={{ opacity: active || completedStep ? 1 : 0, scale: active ? 1 : 0.92 }}
-                    className="absolute inset-0 rounded-full bg-tintSoft"
-                  />
-                  <span className="relative z-10 grid h-full place-items-center text-xs font-medium text-text">{index + 1}</span>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium leading-none text-text">{step.label}</div>
-                  <div className="mt-1 text-[11px] leading-none text-muted">
-                    {completedStep ? "Complete" : active ? "In progress" : available ? "Available" : "Complete the previous step first"}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          <div className="h-4 w-px bg-[#e2e1de]" />
+
+          <span className="text-[10px] text-[#9c9c9a]">
+            Step {currentStepIndex + 1} of {stepsMeta.length}
+          </span>
         </div>
-      </div>
+      </header>
 
-      <motion.div key={currentStep} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }}>
-        {currentStep === "pretest" ? (
+      {/* ── Content ── */}
+      <div className="flex-1 overflow-y-auto">
+        {currentStep === "pretest" && (
           <PretestStep
             pretest={lesson.pretest}
             onContinue={() => {
@@ -128,27 +114,39 @@ export function LessonViewer({
               startTransition(() => setStep("learn"));
             }}
           />
-        ) : null}
+        )}
 
-        {currentStep === "learn" ? (
-          <div>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-4">
-              <div className="max-w-2xl">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Learn</div>
-                <p className="mt-1 text-sm leading-6 text-muted">
-                  Focus on the lesson content first, then continue to the exercise when you are ready to apply it.
-                </p>
-              </div>
-              <Button onClick={() => { setFurthestStepIndex((v) => Math.max(v, 2)); setStep("exercise"); }}>
-                Continue to exercise
-              </Button>
+        {currentStep === "learn" && (
+          <div className="flex flex-col h-full">
+            {/* Learn content */}
+            <div className="flex-1 overflow-y-auto">
+              <article className="prose-lesson mx-auto max-w-[780px] px-6 py-8 sm:px-8">
+                {renderedContent}
+              </article>
             </div>
-            <article className="prose-lesson mx-auto max-w-[920px] px-1 py-2 sm:px-2">
-              {renderedContent}
-            </article>
+
+            {/* Bottom bar */}
+            <div className="flex-shrink-0 border-t border-[#e2e1de] bg-white px-6 py-3 flex items-center justify-between">
+              <button
+                onClick={() => setStep("pretest")}
+                className="text-[11px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors flex items-center gap-1.5"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                Back to pre-test
+              </button>
+              <button
+                onClick={() => {
+                  setFurthestStepIndex((v) => Math.max(v, 2));
+                  setStep("exercise");
+                }}
+                className="text-[12px] font-medium px-4 py-1.5 rounded-md bg-[#1a1a19] text-white hover:bg-[#333] transition-colors"
+              >
+                Continue to exercise
+              </button>
+            </div>
           </div>
-        ) : null}
-      </motion.div>
+        )}
+      </div>
     </div>
   );
 }

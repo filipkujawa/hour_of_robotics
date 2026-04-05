@@ -1,16 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
 
 export function Logo() {
   return (
-    <Link href="/" className="inline-flex items-center gap-3 text-text">
-      <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl border border-primary/15 bg-[#120e1d] p-1.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-        <Image src="/innate-logo.png" alt="Innate logo" width={40} height={40} className="h-full w-full object-contain" priority />
+    <Link href="/" className="inline-flex items-center gap-2.5">
+      <div className="h-7 w-7 rounded-md bg-[#d97706] flex items-center justify-center">
+        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
       </div>
-      <div>
-        <div className="font-display text-xl leading-none tracking-tight">Hour of Robotics</div>
-        <div className="text-xs text-muted">for Innate MARS</div>
-      </div>
+      <span className="text-[14px] font-bold tracking-tight text-[#1a1a19]">Hour of Robotics</span>
     </Link>
   );
 }

@@ -8,12 +8,16 @@ export default function LearnPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl space-y-6 px-6 py-10 sm:px-8">
-        <div className="max-w-3xl">
-          <div className="text-sm uppercase tracking-[0.2em] text-primary">Course overview</div>
-          <h1 className="mt-3 font-display text-5xl tracking-tight text-text">The complete robotics path</h1>
-          <p className="mt-4 text-base leading-8 text-muted">
-            Every chapter is expanded here so students and teachers can see the full structure, lesson timing, and unlock state at a glance.
+      <div className="mx-auto max-w-6xl space-y-5 px-6 py-10">
+        <div className="max-w-2xl">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d97706]">
+            Curriculum
+          </div>
+          <h1 className="mt-2 text-[28px] font-bold tracking-tight text-[#1a1a19]">
+            The complete robotics path
+          </h1>
+          <p className="mt-2 text-[13px] text-[#6b6b69] leading-7">
+            7 chapters taking students from &quot;what is a robot&quot; to building autonomous behaviors.
           </p>
         </div>
         {chapters.map((chapter) => (
