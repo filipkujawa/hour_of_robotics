@@ -9,7 +9,7 @@ interface LessonStoreState {
   currentStep: LessonStep;
   workspaceXml: string;
   generatedPython: string;
-  setLesson: (lessonKey: string) => void;
+  setLesson: (lessonKey: string, initialStep?: LessonStep) => void;
   setStep: (step: LessonStep) => void;
   setWorkspaceXml: (xml: string) => void;
   setGeneratedPython: (python: string) => void;
@@ -21,10 +21,10 @@ export const useLessonStore = create<LessonStoreState>((set) => ({
   currentStep: "pretest",
   workspaceXml: "",
   generatedPython: "",
-  setLesson: (lessonKey) =>
+  setLesson: (lessonKey, initialStep = "pretest") =>
     set((state) => ({
       currentLessonKey: lessonKey,
-      currentStep: state.currentLessonKey === lessonKey ? state.currentStep : "pretest"
+      currentStep: state.currentLessonKey === lessonKey ? state.currentStep : initialStep
     })),
   setStep: (step) => set({ currentStep: step }),
   setWorkspaceXml: (workspaceXml) => set({ workspaceXml }),

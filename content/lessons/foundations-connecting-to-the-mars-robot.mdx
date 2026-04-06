@@ -1,0 +1,59 @@
+# Connecting to the MARS Robot
+
+Before you can program MARS, you need the robot powered on, finished booting, and reachable from your computer. This lesson is a setup guide. The goal is simple: get MARS into a state where the course can connect to it reliably.
+
+<Callout type="robot-required" title="You need the real robot">
+This lesson happens on physical hardware. Do not continue until you are standing with the robot and have access to the same Wi-Fi network it uses.
+</Callout>
+
+## 1. Power on MARS
+
+Start with the robot fully placed on the floor or another stable surface with room to rotate.
+
+1. Check that MARS has enough battery or is connected to power.
+2. Press the power button and wait for the normal startup sequence.
+3. Give the robot time to finish booting before trying to connect.
+
+If your classroom uses a separate switch for the onboard computer or motors, make sure those are on too.
+
+## 2. Confirm network access
+
+The course connects to MARS through a WebSocket URL. That only works if your computer can reach the robot over the local network.
+
+1. Connect your laptop to the same Wi-Fi network as MARS.
+2. Keep VPNs or network tools off if they block local device discovery.
+3. Use the default robot address unless your instructor gave you a different one: `ws://mars.local:9090`
+
+<Callout type="concept" title="What this address means">
+`mars.local` is the local network name of the robot, and `9090` is the port used by the ROS bridge that accepts the course connection.
+</Callout>
+
+## 3. Check that MARS is ready
+
+Before connecting from the lesson exercise, quickly verify these basics:
+
+- The robot is still powered on.
+- It has completed startup.
+- Your computer and the robot are on the same network.
+- The robot has enough clear space to rotate in place.
+
+## 4. Connect from the course
+
+In the exercise step for this lesson, open the connection dialog and try the default URL first. A successful connection means the browser can reach the robot's ROS bridge and the course can start sending commands.
+
+If the connection fails, check the simple causes first:
+
+- Wrong Wi-Fi network
+- Robot still booting
+- Incorrect WebSocket URL
+- ROS bridge not running on the robot
+
+## What success looks like
+
+You are ready for the rest of the chapter when:
+
+- the course shows MARS as connected
+- the robot responds to a basic test action
+- you can continue without changing cables or network setup
+
+Once this works, the rest of chapter 1 can focus on robotics ideas instead of setup friction.

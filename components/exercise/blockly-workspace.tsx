@@ -6,10 +6,9 @@ import { pythonGenerator } from "blockly/python";
 import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft } from "lucide-react";
-import Link from "next/link";
+import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown } from "lucide-react";
 
-import type { Exercise } from "@/lib/course-data";
+import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
 import { registerAllBlocks } from "@/lib/blocks";
 import { registerAllGenerators } from "@/lib/generators/python";
@@ -22,7 +21,15 @@ const g = globalThis as unknown as { __blocksRegistered?: boolean };
 
 type LeftPanel = "exercise" | "chat";
 
-export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise; onComplete: () => void }) {
+export function BlocklyWorkspace({
+  exercise,
+  onBack,
+  onComplete,
+}: {
+  exercise: BlocklyExercise;
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
 
@@ -32,6 +39,7 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
   const [showConsole, setShowConsole] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showHints, setShowHints] = useState(false);
 
   const { status: connectionStatus, isRunning, logs, connect, disconnect, runWorkspace, stopExecution, clearLogs } = useRobot();
 
@@ -149,6 +157,10 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
     };
   }, [exercise.initialXml, handleWorkspaceChange]);
 
+  useEffect(() => {
+    setShowHints(false);
+  }, [exercise.title]);
+
   const handleRun = () => {
     if (connectionStatus !== "connected") {
       setConnectOpen(true);
@@ -171,10 +183,13 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
       {/* ── Top Bar ── */}
       <header className="h-11 flex items-center justify-between px-4 bg-white border-b border-[#e2e1de] flex-shrink-0">
         <div className="flex items-center gap-4">
-          <Link href="/learn" className="flex items-center gap-1.5 text-[11px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-[11px] text-[#9c9c9a] transition-colors hover:text-[#6b6b69]"
+          >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Back
-          </Link>
+            Back to lesson
+          </button>
           <div className="h-4 w-px bg-[#e2e1de]" />
           <span className="text-[12px] font-semibold text-[#1a1a19] truncate max-w-[200px]">{exercise.title}</span>
           <div className="h-4 w-px bg-[#e2e1de]" />
@@ -228,12 +243,24 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
                 </ul>
                 {exercise.hints.length > 0 && (
                   <>
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9c9c9a] mt-5 mb-2">
-                      <Lightbulb className="h-3 w-3 text-[#d97706]" /> Hints
-                    </div>
-                    <ul className="space-y-1 text-[11px] text-[#9c9c9a] leading-relaxed">
-                      {exercise.hints.map((h) => (<li key={h}>{h}</li>))}
-                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => setShowHints((current) => !current)}
+                      className="mt-5 mb-2 flex w-full items-center justify-between rounded-lg border border-[#f0efed] bg-[#fafaf9] px-3 py-2 text-left transition-colors hover:bg-white"
+                    >
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9c9c9a]">
+                        <Lightbulb className="h-3 w-3 text-[#d97706]" />
+                        Hints
+                      </span>
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 text-[#9c9c9a] transition-transform ${showHints ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {showHints && (
+                      <ul className="space-y-1 text-[11px] text-[#9c9c9a] leading-relaxed">
+                        {exercise.hints.map((h) => (<li key={h}>{h}</li>))}
+                      </ul>
+                    )}
                   </>
                 )}
               </div>

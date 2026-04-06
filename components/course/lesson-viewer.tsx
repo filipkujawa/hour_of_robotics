@@ -8,11 +8,12 @@ import { ChevronLeft, BookOpen, FlaskConical, Code2 } from "lucide-react";
 import { LessonCompletion } from "@/components/course/lesson-completion";
 import { PretestStep } from "@/components/course/pretest-step";
 import { BlocklyWorkspace } from "@/components/exercise/blockly-workspace";
+import { MarsConnectExerciseView } from "@/components/exercise/mars-connect-exercise";
 import type { Chapter, Lesson, LessonStep } from "@/lib/course-data";
 import { chapters } from "@/lib/course-data";
 import { useLessonStore } from "@/lib/store/lesson-store";
 
-const stepsMeta: { id: LessonStep; label: string; icon: typeof BookOpen }[] = [
+const allStepsMeta: { id: LessonStep; label: string; icon: typeof BookOpen }[] = [
   { id: "pretest", label: "Pre-test", icon: FlaskConical },
   { id: "learn", label: "Learn", icon: BookOpen },
   { id: "exercise", label: "Exercise", icon: Code2 },
@@ -34,11 +35,20 @@ export function LessonViewer({
   const [completed, setCompleted] = useState(false);
   const [furthestStepIndex, setFurthestStepIndex] = useState(0);
   const [, startTransition] = useTransition();
+  const stepsMeta = lesson.pretest ? allStepsMeta : allStepsMeta.filter((step) => step.id !== "pretest");
+  const initialStep = lesson.pretest ? "pretest" : "learn";
 
   useEffect(() => {
-    setLesson(lessonKey);
+    setLesson(lessonKey, initialStep);
+    setCompleted(false);
     setFurthestStepIndex(0);
-  }, [lessonKey, setLesson]);
+  }, [initialStep, lessonKey, setLesson]);
+
+  useEffect(() => {
+    if (!stepsMeta.some((step) => step.id === currentStep)) {
+      setStep(initialStep);
+    }
+  }, [currentStep, initialStep, setStep, stepsMeta]);
 
   const flatLessons = useMemo(() => chapters.flatMap((e) => e.lessons), []);
   const lessonIndex = flatLessons.findIndex((e) => e.id === lesson.id);
@@ -49,12 +59,27 @@ export function LessonViewer({
     return <LessonCompletion lesson={lesson} nextLesson={nextLesson} chapterCompleted={chapterCompleted} />;
   }
 
-  // Exercise: full-screen workspace (its own layout)
   if (currentStep === "exercise") {
-    return <BlocklyWorkspace exercise={lesson.exercise} onComplete={() => setCompleted(true)} />;
+    if (lesson.exercise.type === "mars-connect") {
+      return (
+        <MarsConnectExerciseView
+          exercise={lesson.exercise}
+          onBack={() => setStep("learn")}
+          onComplete={() => setCompleted(true)}
+        />
+      );
+    }
+
+    return (
+      <BlocklyWorkspace
+        exercise={lesson.exercise}
+        onBack={() => setStep("learn")}
+        onComplete={() => setCompleted(true)}
+      />
+    );
   }
 
-  const currentStepIndex = stepsMeta.findIndex((s) => s.id === currentStep);
+  const currentStepIndex = Math.max(0, stepsMeta.findIndex((s) => s.id === currentStep));
 
   return (
     <div className="h-screen w-screen fixed inset-0 z-50 flex flex-col bg-[#f5f5f4] text-[#1a1a19] overflow-hidden">
@@ -106,11 +131,12 @@ export function LessonViewer({
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto">
-        {currentStep === "pretest" && (
+        {currentStep === "pretest" && lesson.pretest && (
           <PretestStep
             pretest={lesson.pretest}
             onContinue={() => {
-              setFurthestStepIndex((v) => Math.max(v, 1));
+              const learnIndex = stepsMeta.findIndex((step) => step.id === "learn");
+              setFurthestStepIndex((v) => Math.max(v, learnIndex));
               startTransition(() => setStep("learn"));
             }}
           />
@@ -127,16 +153,21 @@ export function LessonViewer({
 
             {/* Bottom bar */}
             <div className="flex-shrink-0 border-t border-[#e2e1de] bg-white px-6 py-3 flex items-center justify-between">
-              <button
-                onClick={() => setStep("pretest")}
-                className="text-[11px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors flex items-center gap-1.5"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                Back to pre-test
-              </button>
+              {lesson.pretest ? (
+                <button
+                  onClick={() => setStep("pretest")}
+                  className="text-[11px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors flex items-center gap-1.5"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Back to pre-test
+                </button>
+              ) : (
+                <div />
+              )}
               <button
                 onClick={() => {
-                  setFurthestStepIndex((v) => Math.max(v, 2));
+                  const exerciseIndex = stepsMeta.findIndex((step) => step.id === "exercise");
+                  setFurthestStepIndex((v) => Math.max(v, exerciseIndex));
                   setStep("exercise");
                 }}
                 className="text-[12px] font-medium px-4 py-1.5 rounded-md bg-[#1a1a19] text-white hover:bg-[#333] transition-colors"

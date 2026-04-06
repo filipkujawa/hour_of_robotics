@@ -40,7 +40,7 @@ export function Callout({
   const Icon = config.icon;
 
   return (
-    <div className={cn("my-6 rounded-2xl border p-4 shadow-card", config.className)}>
+    <div className={cn("lesson-callout rounded-2xl border p-4 shadow-card", config.className)}>
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
         <Icon className="h-4 w-4" />
         <span>{title}</span>
@@ -64,8 +64,13 @@ export const mdxComponents = {
   p: (props: HTMLAttributes<HTMLParagraphElement>) => (
     <p className="mt-4 text-[1.02rem] leading-8 text-text/88" {...props} />
   ),
-  ul: (props: HTMLAttributes<HTMLUListElement>) => <ul className="mt-4 space-y-3 pl-6 text-text/88" {...props} />,
-  li: (props: HTMLAttributes<HTMLLIElement>) => <li className="list-disc leading-7" {...props} />,
+  ul: (props: HTMLAttributes<HTMLUListElement>) => (
+    <ul className="mt-4 list-disc space-y-2 pl-6 text-[1.02rem] leading-8 text-text/88 marker:text-text/60" {...props} />
+  ),
+  ol: (props: HTMLAttributes<HTMLOListElement>) => (
+    <ol className="mt-4 list-decimal space-y-2 pl-6 text-[1.02rem] leading-8 text-text/88 marker:font-medium marker:text-text/60" {...props} />
+  ),
+  li: (props: HTMLAttributes<HTMLLIElement>) => <li className="pl-1" {...props} />,
   blockquote: (props: HTMLAttributes<HTMLQuoteElement>) => (
     <blockquote
       className="my-6 border-l-4 border-primary bg-tintSoft/70 px-5 py-3 text-sm italic text-text/80"

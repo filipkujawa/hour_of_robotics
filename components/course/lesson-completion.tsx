@@ -58,7 +58,7 @@ export function LessonCompletion({
         </div>
         <h2 className="mt-6 font-display text-4xl tracking-tight text-text">Lesson complete</h2>
         <p className="mt-4 text-base leading-8 text-muted">
-          {lesson.title} is finished. Your pre-test answer and Blockly work are ready to save into persistent progress once Supabase is connected.
+          {lesson.title} is finished. Your lesson progress is ready to save into persistent progress once Supabase is connected.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           {nextLesson ? (
