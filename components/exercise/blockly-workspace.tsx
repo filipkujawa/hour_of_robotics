@@ -7,7 +7,6 @@ import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown } from "lucide-react";
-import Link from "next/link";
 
 import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
@@ -22,7 +21,15 @@ const g = globalThis as unknown as { __blocksRegistered?: boolean };
 
 type LeftPanel = "exercise" | "chat";
 
-export function BlocklyWorkspace({ exercise, onComplete }: { exercise: BlocklyExercise; onComplete: () => void }) {
+export function BlocklyWorkspace({
+  exercise,
+  onBack,
+  onComplete,
+}: {
+  exercise: BlocklyExercise;
+  onBack: () => void;
+  onComplete: () => void;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
 
@@ -157,10 +164,13 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: BlocklyEx
       {/* ── Top Bar ── */}
       <header className="h-11 flex items-center justify-between px-4 bg-white border-b border-[#e2e1de] flex-shrink-0">
         <div className="flex items-center gap-4">
-          <Link href="/learn" className="flex items-center gap-1.5 text-[11px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-[11px] text-[#9c9c9a] transition-colors hover:text-[#6b6b69]"
+          >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Back
-          </Link>
+            Back to lesson
+          </button>
           <div className="h-4 w-px bg-[#e2e1de]" />
           <span className="text-[12px] font-semibold text-[#1a1a19] truncate max-w-[200px]">{exercise.title}</span>
           <div className="h-4 w-px bg-[#e2e1de]" />

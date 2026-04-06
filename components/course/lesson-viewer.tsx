@@ -61,10 +61,22 @@ export function LessonViewer({
 
   if (currentStep === "exercise") {
     if (lesson.exercise.type === "mars-connect") {
-      return <MarsConnectExerciseView exercise={lesson.exercise} onComplete={() => setCompleted(true)} />;
+      return (
+        <MarsConnectExerciseView
+          exercise={lesson.exercise}
+          onBack={() => setStep("learn")}
+          onComplete={() => setCompleted(true)}
+        />
+      );
     }
 
-    return <BlocklyWorkspace exercise={lesson.exercise} onComplete={() => setCompleted(true)} />;
+    return (
+      <BlocklyWorkspace
+        exercise={lesson.exercise}
+        onBack={() => setStep("learn")}
+        onComplete={() => setCompleted(true)}
+      />
+    );
   }
 
   const currentStepIndex = Math.max(0, stepsMeta.findIndex((s) => s.id === currentStep));

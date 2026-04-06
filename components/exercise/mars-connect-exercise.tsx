@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { CheckCircle2, ChevronLeft, Loader2, MessageCircle, Terminal, Wifi, WifiOff } from "lucide-react";
 
 import type { MarsConnectExercise } from "@/lib/course-data";
@@ -14,9 +13,11 @@ type LeftPanel = "exercise" | "chat";
 
 export function MarsConnectExerciseView({
   exercise,
+  onBack,
   onComplete,
 }: {
   exercise: MarsConnectExercise;
+  onBack: () => void;
   onComplete: () => void;
 }) {
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("exercise");
@@ -49,10 +50,13 @@ export function MarsConnectExerciseView({
     <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-[#f5f5f4] text-[#1a1a19]">
       <header className="flex h-11 flex-shrink-0 items-center justify-between border-b border-[#e2e1de] bg-white px-4">
         <div className="flex items-center gap-4">
-          <Link href="/learn" className="flex items-center gap-1.5 text-[11px] text-[#9c9c9a] transition-colors hover:text-[#6b6b69]">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-[11px] text-[#9c9c9a] transition-colors hover:text-[#6b6b69]"
+          >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Back
-          </Link>
+            Back to lesson
+          </button>
           <div className="h-4 w-px bg-[#e2e1de]" />
           <span className="max-w-[220px] truncate text-[12px] font-semibold text-[#1a1a19]">{exercise.title}</span>
           <div className="h-4 w-px bg-[#e2e1de]" />
