@@ -124,6 +124,11 @@ body {
 
 /* ── Blockly Flyout ── */
 
+.blocklyFlyout:not([style*="display: block"]) .blocklyFlyoutScrollbar,
+.blocklyFlyout[style*="display: none"] + .blocklyFlyoutScrollbar {
+  display: none !important;
+}
+
 .blocklyFlyoutBackground {
   fill: #f0efed !important;
   fill-opacity: 0.98 !important;

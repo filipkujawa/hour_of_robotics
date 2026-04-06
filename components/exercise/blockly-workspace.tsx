@@ -110,6 +110,25 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
     workspaceRef.current = workspace;
     workspace.addChangeListener(handleWorkspaceChange);
 
+    // Patch toolbox so clicking the selected category toggles the flyout closed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const toolbox = workspace.getToolbox() as any;
+    if (toolbox) {
+      const origSetSelectedItem = toolbox.setSelectedItem.bind(toolbox);
+      toolbox.setSelectedItem = (newItem: unknown) => {
+        const oldItem = toolbox.selectedItem_;
+        if (oldItem && oldItem === newItem) {
+          // Same category clicked again — deselect & close flyout
+          oldItem.setSelected(false);
+          toolbox.selectedItem_ = null;
+          toolbox.updateFlyout_(oldItem, null);
+          toolbox.fireSelectEvent(oldItem, null);
+          return;
+        }
+        origSetSelectedItem(newItem);
+      };
+    }
+
     // Load initial XML if provided
     if (exercise.initialXml) {
       try {
