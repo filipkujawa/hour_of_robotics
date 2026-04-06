@@ -6,7 +6,7 @@ import { pythonGenerator } from "blockly/python";
 import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft } from "lucide-react";
+import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 import type { Exercise } from "@/lib/course-data";
@@ -32,6 +32,7 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
   const [showConsole, setShowConsole] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showHints, setShowHints] = useState(false);
 
   const { status: connectionStatus, isRunning, logs, connect, disconnect, runWorkspace, stopExecution, clearLogs } = useRobot();
 
@@ -130,6 +131,10 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
     };
   }, [exercise.initialXml, handleWorkspaceChange]);
 
+  useEffect(() => {
+    setShowHints(false);
+  }, [exercise.title]);
+
   const handleRun = () => {
     if (connectionStatus !== "connected") {
       setConnectOpen(true);
@@ -209,12 +214,24 @@ export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise;
                 </ul>
                 {exercise.hints.length > 0 && (
                   <>
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9c9c9a] mt-5 mb-2">
-                      <Lightbulb className="h-3 w-3 text-[#d97706]" /> Hints
-                    </div>
-                    <ul className="space-y-1 text-[11px] text-[#9c9c9a] leading-relaxed">
-                      {exercise.hints.map((h) => (<li key={h}>{h}</li>))}
-                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => setShowHints((current) => !current)}
+                      className="mt-5 mb-2 flex w-full items-center justify-between rounded-lg border border-[#f0efed] bg-[#fafaf9] px-3 py-2 text-left transition-colors hover:bg-white"
+                    >
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9c9c9a]">
+                        <Lightbulb className="h-3 w-3 text-[#d97706]" />
+                        Hints
+                      </span>
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 text-[#9c9c9a] transition-transform ${showHints ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {showHints && (
+                      <ul className="space-y-1 text-[11px] text-[#9c9c9a] leading-relaxed">
+                        {exercise.hints.map((h) => (<li key={h}>{h}</li>))}
+                      </ul>
+                    )}
                   </>
                 )}
               </div>
