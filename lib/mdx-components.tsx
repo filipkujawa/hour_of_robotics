@@ -40,7 +40,7 @@ export function Callout({
   const Icon = config.icon;
 
   return (
-    <div className={cn("mt-10 mb-10 rounded-2xl border p-4 shadow-card sm:mt-12 sm:mb-12", config.className)}>
+    <div className={cn("lesson-callout rounded-2xl border p-4 shadow-card", config.className)}>
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
         <Icon className="h-4 w-4" />
         <span>{title}</span>
