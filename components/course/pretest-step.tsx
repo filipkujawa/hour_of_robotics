@@ -48,13 +48,8 @@ export function PretestStep({
                       <div className="w-2.5 h-2.5 rounded-full bg-[#d97706]" />
                     )}
                   </div>
-                  <div>
-                    <div className="text-[10px] font-semibold text-[#9c9c9a] uppercase">
-                      {option.id}
-                    </div>
-                    <div className="text-[13px] text-[#1a1a19] mt-0.5">
-                      {option.label}
-                    </div>
+                  <div className="text-[13px] text-[#1a1a19]">
+                    {option.label}
                   </div>
                 </div>
               </button>
