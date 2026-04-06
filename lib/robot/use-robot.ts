@@ -87,6 +87,26 @@ export function useRobot() {
     setLogs([]);
   }, []);
 
+  const sayAndSpin = useCallback(async () => {
+    if (!robotRef.current) {
+      addLog("Not connected to robot", "error");
+      return false;
+    }
+
+    setIsRunning(true);
+    try {
+      await robotRef.current.say("Hi!");
+      await robotRef.current.turn("LEFT", 360);
+      addLog("Hello-and-spin check completed", "success");
+      return true;
+    } catch (err) {
+      addLog(`Action error: ${err instanceof Error ? err.message : String(err)}`, "error");
+      return false;
+    } finally {
+      setIsRunning(false);
+    }
+  }, [addLog]);
+
   return {
     status,
     isRunning,
@@ -96,5 +116,6 @@ export function useRobot() {
     runWorkspace,
     stopExecution,
     clearLogs,
+    sayAndSpin,
   };
 }

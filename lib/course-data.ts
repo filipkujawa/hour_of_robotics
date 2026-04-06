@@ -2,7 +2,7 @@ export type Role = "student" | "teacher";
 export type LessonStep = "pretest" | "learn" | "exercise";
 export type ProgressStatus = "not_started" | "in_progress" | "completed";
 export type PretestType = "multiple-choice";
-export type ExerciseType = "blockly";
+export type ExerciseType = "blockly" | "mars-connect";
 
 export interface PretestOption {
   id: string;
@@ -17,14 +17,25 @@ export interface Pretest {
   explanation: string;
 }
 
-export interface Exercise {
-  type: ExerciseType;
+interface ExerciseBase {
   title: string;
   prompt: string;
   successCriteria: string[];
   hints: string[];
+}
+
+export interface BlocklyExercise extends ExerciseBase {
+  type: "blockly";
   initialXml?: string;
 }
+
+export interface MarsConnectExercise extends ExerciseBase {
+  type: "mars-connect";
+  actionLabel: string;
+  celebrationMessage: string;
+}
+
+export type Exercise = BlocklyExercise | MarsConnectExercise;
 
 export interface Lesson {
   id: string;
@@ -36,7 +47,7 @@ export interface Lesson {
   summary: string;
   estimatedMinutes: number;
   mdxPath?: string;
-  pretest: Pretest;
+  pretest?: Pretest;
   exercise: Exercise;
 }
 
@@ -72,7 +83,7 @@ const chapterSeeds: ChapterSeed[] = [
     slug: "foundations",
     title: "Foundations",
     description: "Build the mental model for what a robot is and how MARS turns skills into action.",
-    lessons: ["What is a Robot?", "Your First Skill Call"]
+    lessons: ["Connecting to the MARS Robot", "What is a Robot?", "Your First Skill Call"]
   },
   {
     slug: "sensing",
@@ -163,7 +174,7 @@ export const chapters: Chapter[] = chapterSeeds.map((chapterSeed, chapterIndex) 
       lessonNumber: lessonIndex + 1,
       title: lessonTitle,
       summary: `A focused lesson on ${lessonTitle.toLowerCase()} using the Innate MARS robot.`,
-      estimatedMinutes: chapterNumber === 1 && lessonIndex === 0 ? 14 : 12,
+      estimatedMinutes: chapterNumber === 1 && lessonIndex === 0 ? 10 : 12,
       pretest: makeStubPretest(lessonTitle),
       exercise: makeStubExercise(lessonTitle)
     } satisfies Lesson;
@@ -182,9 +193,32 @@ export const chapters: Chapter[] = chapterSeeds.map((chapterSeed, chapterIndex) 
 
 const chapterOneLessonOne = chapters[0].lessons[0];
 chapterOneLessonOne.summary =
+  "Get MARS powered on, on the right network, and ready for its first live connection from the course workspace.";
+chapterOneLessonOne.mdxPath = "content/lessons/foundations-connecting-to-the-mars-robot.mdx";
+chapterOneLessonOne.pretest = undefined;
+chapterOneLessonOne.exercise = {
+  type: "mars-connect",
+  title: "Connect to MARS",
+  prompt:
+    "Power on MARS, connect from the course, then trigger a quick hello-and-spin check to confirm the robot is responding.",
+  successCriteria: [
+    "Connect successfully to the MARS robot.",
+    "Use the action button to make MARS say hi and spin in place.",
+  ],
+  hints: [
+    "Wait for the robot to finish booting before opening the connect dialog.",
+    "Use the default robot URL unless your instructor gave you a different one.",
+    "If connection fails, recheck Wi-Fi and make sure the ROS bridge is reachable.",
+  ],
+  actionLabel: "Say Hi and Spin",
+  celebrationMessage: "MARS responded. The robot is connected and ready for the rest of chapter 1.",
+};
+
+const chapterOneLessonTwo = chapters[0].lessons[1];
+chapterOneLessonTwo.summary =
   "Understand what makes a machine a robot: sensing, deciding, and acting in the physical world.";
-chapterOneLessonOne.mdxPath = "content/lessons/foundations-what-is-a-robot.mdx";
-chapterOneLessonOne.pretest = {
+chapterOneLessonTwo.mdxPath = "content/lessons/foundations-what-is-a-robot.mdx";
+chapterOneLessonTwo.pretest = {
   type: "multiple-choice",
   question: "Which description best captures what makes a system a robot?",
   options: [
@@ -197,7 +231,7 @@ chapterOneLessonOne.pretest = {
   explanation:
     "Robots combine sensing, computation, and physical action. Movement alone is not enough, and remote control alone is not autonomy."
 };
-chapterOneLessonOne.exercise = {
+chapterOneLessonTwo.exercise = {
   type: "blockly",
   title: "Meet MARS",
   prompt:
@@ -216,8 +250,8 @@ chapterOneLessonOne.exercise = {
     '<xml xmlns="https://developers.google.com/blockly/xml"><block type="mars_say" x="28" y="32"><field name="TEXT">Hello!</field><next><block type="mars_move_forward"><field name="DISTANCE">0.5</field></block></next></block></xml>'
 };
 
-const chapterOneLessonTwo = chapters[0].lessons[1];
-chapterOneLessonTwo.mdxPath = "content/lessons/foundations-your-first-skill-call.mdx";
+const chapterOneLessonThree = chapters[0].lessons[2];
+chapterOneLessonThree.mdxPath = "content/lessons/foundations-your-first-skill-call.mdx";
 
 export const chapterMap = new Map(chapters.map((chapter) => [chapter.slug, chapter]));
 export const lessonMap = new Map(

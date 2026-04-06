@@ -9,7 +9,7 @@ import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
-import type { Exercise } from "@/lib/course-data";
+import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
 import { registerAllBlocks } from "@/lib/blocks";
 import { registerAllGenerators } from "@/lib/generators/python";
@@ -22,7 +22,7 @@ const g = globalThis as unknown as { __blocksRegistered?: boolean };
 
 type LeftPanel = "exercise" | "chat";
 
-export function BlocklyWorkspace({ exercise, onComplete }: { exercise: Exercise; onComplete: () => void }) {
+export function BlocklyWorkspace({ exercise, onComplete }: { exercise: BlocklyExercise; onComplete: () => void }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
 
