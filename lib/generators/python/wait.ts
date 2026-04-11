@@ -6,6 +6,11 @@ export function registerWaitGenerators() {
     return `mars.wait(${seconds})\n`;
   };
 
+  pythonGenerator.forBlock["mars_print"] = function (block, generator) {
+    const value = generator.valueToCode(block, "VALUE", Order.NONE) || '""';
+    return `print(${value})\n`;
+  };
+
   pythonGenerator.forBlock["mars_wait_until"] = function (block, generator) {
     const condition =
       generator.valueToCode(block, "CONDITION", Order.NONE) || "False";

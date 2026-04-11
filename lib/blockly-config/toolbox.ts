@@ -57,7 +57,15 @@ export const toolboxConfig = {
       colour: "#fdcb6e",
       contents: [
         { kind: "block", type: "mars_say" },
-        { kind: "block", type: "mars_say_value" },
+        {
+          kind: "block",
+          type: "mars_say_value",
+          inputs: {
+            TEXT: {
+              block: { type: "mars_chat_ask" },
+            },
+          },
+        },
         { kind: "block", type: "mars_listen" },
         { kind: "block", type: "mars_set_voice" },
         { kind: "block", type: "mars_play_sound" },
@@ -92,11 +100,20 @@ export const toolboxConfig = {
     },
     {
       kind: "category",
-      name: "Timing",
+      name: "Utilities",
       colour: "#636e72",
       contents: [
         { kind: "block", type: "mars_wait" },
         { kind: "block", type: "mars_wait_until" },
+        {
+          kind: "block",
+          type: "mars_print",
+          inputs: {
+            VALUE: {
+              block: { type: "mars_get_distance" },
+            },
+          },
+        },
       ],
     },
     { kind: "sep" },

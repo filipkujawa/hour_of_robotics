@@ -17,14 +17,14 @@ const speechBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     previousStatement: null,
     nextStatement: null,
     colour: "#fdcb6e",
-    tooltip: "Speak the value of a plugged-in block (like an AI response or variable)",
+    tooltip: "Say the result of a plugged-in block — drag an oval block (AI response, sensor reading, variable) into the socket",
   },
   {
     type: "mars_listen",
     message0: "listen for speech",
     output: "String",
     colour: "#fdcb6e",
-    tooltip: "Listen with the microphone and return what was said",
+    tooltip: "Returns text: what the microphone heard. Plug into say, print, if-comparisons, or variables.",
   },
   {
     type: "mars_set_voice",

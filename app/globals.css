@@ -211,15 +211,25 @@ body {
 .blocklyDropdownText {
   font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
   font-size: 12px !important;
+  fill: #1a1a19 !important;
 }
 
 /* ── Dropdowns & Menus ── */
 
-.blocklyDropDownDiv {
+div.blocklyDropDownDiv[style] {
+  background-color: white !important;
   border: 1px solid #e2e1de !important;
   border-radius: 8px !important;
   overflow: hidden !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+div.blocklyDropDownDiv[style] > div.blocklyDropDownArrow {
+  display: none !important;
+}
+
+.blocklyDropDownDiv .blocklyMenu .blocklyMenuItemContent {
+  color: #1a1a19 !important;
 }
 
 .blocklyMenu {
@@ -238,6 +248,10 @@ body {
 
 .blocklyMenuItemHighlight {
   background-color: #f5f3ef !important;
+}
+
+.blocklyMenuItemCheckbox {
+  display: none !important;
 }
 
 .blocklyContextMenu {

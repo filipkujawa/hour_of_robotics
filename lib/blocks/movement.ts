@@ -36,7 +36,7 @@ const movementBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
           ["right", "RIGHT"],
         ],
       },
-      { type: "field_angle", name: "DEGREES", angle: 90 },
+      { type: "field_number", name: "DEGREES", value: 90, min: 0, max: 360 },
     ],
     previousStatement: null,
     nextStatement: null,

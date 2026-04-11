@@ -3,10 +3,10 @@ import * as Blockly from "blockly";
 const sensorBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
   {
     type: "mars_get_distance",
-    message0: "distance to nearest object",
+    message0: "distance (cm)",
     output: "Number",
     colour: "#0984e3",
-    tooltip: "Get distance reading from LiDAR (in cm)",
+    tooltip: "Returns a number: distance to nearest object in cm. Plug into print, say, if-comparisons, or variables.",
   },
   {
     type: "mars_see_object",
@@ -64,17 +64,17 @@ const sensorBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
   },
   {
     type: "mars_get_battery",
-    message0: "battery level %",
+    message0: "battery %",
     output: "Number",
     colour: "#0984e3",
-    tooltip: "Get the current battery percentage (0-100)",
+    tooltip: "Returns a number: battery percentage 0-100. Plug into print, say, if-comparisons, or variables.",
   },
   {
     type: "mars_get_heading",
-    message0: "robot heading (degrees)",
+    message0: "heading (deg)",
     output: "Number",
     colour: "#0984e3",
-    tooltip: "Get the robot's current heading from odometry (0-360 degrees)",
+    tooltip: "Returns a number: robot heading 0-360 degrees. Plug into print, say, if-comparisons, or variables.",
   },
 ]);
 

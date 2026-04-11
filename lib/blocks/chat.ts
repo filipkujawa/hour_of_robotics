@@ -9,7 +9,7 @@ const chatBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     ],
     output: "String",
     colour: "#6c5ce7",
-    tooltip: "Send a message to the robot AI brain and get a response",
+    tooltip: "Returns text: the AI's response. Plug into say, print, if-comparisons, or variables.",
   },
 ]);
 

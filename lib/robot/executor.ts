@@ -268,6 +268,13 @@ export class BlockExecutor {
         await this.robot.ledsOff();
         break;
 
+      // ---- Console ----
+      case "mars_print": {
+        const value = await this.evaluateValue(block.inputs.VALUE || null);
+        this.onLog(`${value}`);
+        break;
+      }
+
       // ---- Timing ----
       case "mars_wait": {
         const seconds = Number(block.fields.SECONDS) || 1;
