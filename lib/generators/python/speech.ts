@@ -7,6 +7,11 @@ export function registerSpeechGenerators() {
     return `mars.say("${escaped}")\n`;
   };
 
+  pythonGenerator.forBlock["mars_say_value"] = function (block) {
+    const text = pythonGenerator.valueToCode(block, "TEXT", Order.NONE) || '""';
+    return `mars.say(${text})\n`;
+  };
+
   pythonGenerator.forBlock["mars_listen"] = function () {
     return ["mars.listen()", Order.FUNCTION_CALL];
   };

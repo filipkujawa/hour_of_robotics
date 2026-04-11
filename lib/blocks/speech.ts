@@ -11,6 +11,15 @@ const speechBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Make Mars speak a message out loud",
   },
   {
+    type: "mars_say_value",
+    message0: "say %1",
+    args0: [{ type: "input_value", name: "TEXT", check: "String" }],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#fdcb6e",
+    tooltip: "Speak the value of a plugged-in block (like an AI response or variable)",
+  },
+  {
     type: "mars_listen",
     message0: "listen for speech",
     output: "String",

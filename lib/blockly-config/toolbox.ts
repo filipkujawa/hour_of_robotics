@@ -55,6 +55,7 @@ export const toolboxConfig = {
       colour: "#fdcb6e",
       contents: [
         { kind: "block", type: "mars_say" },
+        { kind: "block", type: "mars_say_value" },
         { kind: "block", type: "mars_listen" },
         { kind: "block", type: "mars_set_voice" },
         { kind: "block", type: "mars_play_sound" },
@@ -66,7 +67,6 @@ export const toolboxConfig = {
       colour: "#6c5ce7",
       contents: [
         { kind: "block", type: "mars_chat_ask" },
-        { kind: "block", type: "mars_chat_say" },
       ],
     },
     {

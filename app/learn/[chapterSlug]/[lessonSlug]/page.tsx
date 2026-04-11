@@ -17,9 +17,9 @@ export function generateStaticParams() {
 export default async function LessonPage({
   params
 }: {
-  params: { chapterSlug: string; lessonSlug: string };
+  params: Promise<{ chapterSlug: string; lessonSlug: string }>;
 }) {
-  const { chapterSlug, lessonSlug } = params;
+  const { chapterSlug, lessonSlug } = await params;
   const chapter = getChapterBySlug(chapterSlug);
   const content = await getLessonContent(chapterSlug, lessonSlug);
 
