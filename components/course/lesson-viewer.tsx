@@ -3,18 +3,16 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, BookOpen, FlaskConical, Code2 } from "lucide-react";
+import { ChevronLeft, BookOpen, Code2 } from "lucide-react";
 
 import { LessonCompletion } from "@/components/course/lesson-completion";
-import { PretestStep } from "@/components/course/pretest-step";
 import { BlocklyWorkspace } from "@/components/exercise/blockly-workspace";
 import { MarsConnectExerciseView } from "@/components/exercise/mars-connect-exercise";
 import type { Chapter, Lesson, LessonStep } from "@/lib/course-data";
 import { chapters } from "@/lib/course-data";
 import { useLessonStore } from "@/lib/store/lesson-store";
 
-const allStepsMeta: { id: LessonStep; label: string; icon: typeof BookOpen }[] = [
-  { id: "pretest", label: "Pre-test", icon: FlaskConical },
+const stepsMeta: { id: LessonStep; label: string; icon: typeof BookOpen }[] = [
   { id: "learn", label: "Learn", icon: BookOpen },
   { id: "exercise", label: "Exercise", icon: Code2 },
 ];
@@ -35,8 +33,7 @@ export function LessonViewer({
   const [completed, setCompleted] = useState(false);
   const [furthestStepIndex, setFurthestStepIndex] = useState(0);
   const [, startTransition] = useTransition();
-  const stepsMeta = lesson.pretest ? allStepsMeta : allStepsMeta.filter((step) => step.id !== "pretest");
-  const initialStep = lesson.pretest ? "pretest" : "learn";
+  const initialStep: LessonStep = "learn";
 
   useEffect(() => {
     setLesson(lessonKey, initialStep);
@@ -131,17 +128,6 @@ export function LessonViewer({
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto">
-        {currentStep === "pretest" && lesson.pretest && (
-          <PretestStep
-            pretest={lesson.pretest}
-            onContinue={() => {
-              const learnIndex = stepsMeta.findIndex((step) => step.id === "learn");
-              setFurthestStepIndex((v) => Math.max(v, learnIndex));
-              startTransition(() => setStep("learn"));
-            }}
-          />
-        )}
-
         {currentStep === "learn" && (
           <div className="flex flex-col h-full">
             {/* Learn content */}
@@ -152,23 +138,12 @@ export function LessonViewer({
             </div>
 
             {/* Bottom bar */}
-            <div className="flex-shrink-0 border-t border-[#e2e1de] bg-white px-6 py-3 flex items-center justify-between">
-              {lesson.pretest ? (
-                <button
-                  onClick={() => setStep("pretest")}
-                  className="text-[11px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors flex items-center gap-1.5"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  Back to pre-test
-                </button>
-              ) : (
-                <div />
-              )}
+            <div className="flex-shrink-0 border-t border-[#e2e1de] bg-white px-6 py-3 flex items-center justify-end">
               <button
                 onClick={() => {
                   const exerciseIndex = stepsMeta.findIndex((step) => step.id === "exercise");
                   setFurthestStepIndex((v) => Math.max(v, exerciseIndex));
-                  setStep("exercise");
+                  startTransition(() => setStep("exercise"));
                 }}
                 className="text-[12px] font-medium px-4 py-1.5 rounded-md bg-[#1a1a19] text-white hover:bg-[#333] transition-colors"
               >

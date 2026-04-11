@@ -6,7 +6,6 @@ interface ProgressPayload {
   lessonId: string;
   step: LessonStep;
   status: ProgressStatus;
-  pretestAnswer?: string | null;
   exerciseCodeXml?: string | null;
   timeSpentSeconds?: number;
 }

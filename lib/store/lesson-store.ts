@@ -18,10 +18,10 @@ interface LessonStoreState {
 
 export const useLessonStore = create<LessonStoreState>((set) => ({
   currentLessonKey: null,
-  currentStep: "pretest",
+  currentStep: "learn",
   workspaceXml: "",
   generatedPython: "",
-  setLesson: (lessonKey, initialStep = "pretest") =>
+  setLesson: (lessonKey, initialStep = "learn") =>
     set((state) => ({
       currentLessonKey: lessonKey,
       currentStep: state.currentLessonKey === lessonKey ? state.currentStep : initialStep

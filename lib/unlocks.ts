@@ -4,7 +4,7 @@ import { chapters } from "@/lib/course-data";
 export interface LessonProgressRecord {
   lessonId: string;
   status: ProgressStatus;
-  step: "pretest" | "learn" | "exercise";
+  step: "learn" | "exercise";
   completedAt?: string | null;
   timeSpentSeconds?: number | null;
 }

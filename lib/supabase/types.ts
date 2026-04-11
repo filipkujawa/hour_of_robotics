@@ -11,9 +11,8 @@ export interface LessonProgressRow {
   id: string;
   user_id: string;
   lesson_id: string;
-  step: "pretest" | "learn" | "exercise";
+  step: "learn" | "exercise";
   status: ProgressStatus;
-  pretest_answer: string | null;
   exercise_code_xml: string | null;
   completed_at: string | null;
   time_spent_seconds: number | null;

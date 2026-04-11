@@ -1,21 +1,7 @@
 export type Role = "student" | "teacher";
-export type LessonStep = "pretest" | "learn" | "exercise";
+export type LessonStep = "learn" | "exercise";
 export type ProgressStatus = "not_started" | "in_progress" | "completed";
-export type PretestType = "multiple-choice";
 export type ExerciseType = "blockly" | "mars-connect";
-
-export interface PretestOption {
-  id: string;
-  label: string;
-}
-
-export interface Pretest {
-  type: PretestType;
-  question: string;
-  options: PretestOption[];
-  correctOptionId: string;
-  explanation: string;
-}
 
 interface ExerciseBase {
   title: string;
@@ -47,7 +33,6 @@ export interface Lesson {
   summary: string;
   estimatedMinutes: number;
   mdxPath?: string;
-  pretest?: Pretest;
   exercise: Exercise;
 }
 
@@ -123,21 +108,6 @@ const chapterSeeds: ChapterSeed[] = [
   }
 ];
 
-function makeStubPretest(title: string): Pretest {
-  return {
-    type: "multiple-choice",
-    question: `Which statement best describes the focus of "${title}"?`,
-    options: [
-      { id: "a", label: "It teaches one robotics idea and connects it to MARS." },
-      { id: "b", label: "It is only a hardware assembly checklist." },
-      { id: "c", label: "It skips robotics concepts and jumps straight to code syntax." },
-      { id: "d", label: "It is just a history lesson about industrial robots." }
-    ],
-    correctOptionId: "a",
-    explanation: "Each lesson is structured around one core robotics idea and how that idea appears on the MARS platform."
-  };
-}
-
 function makeStubExercise(title: string): Exercise {
   return {
     type: "blockly",
@@ -175,7 +145,6 @@ export const chapters: Chapter[] = chapterSeeds.map((chapterSeed, chapterIndex) 
       title: lessonTitle,
       summary: `A focused lesson on ${lessonTitle.toLowerCase()} using the Innate MARS robot.`,
       estimatedMinutes: chapterNumber === 1 && lessonIndex === 0 ? 10 : 12,
-      pretest: makeStubPretest(lessonTitle),
       exercise: makeStubExercise(lessonTitle)
     } satisfies Lesson;
   });
@@ -195,7 +164,6 @@ const chapterOneLessonOne = chapters[0].lessons[0];
 chapterOneLessonOne.summary =
   "Get MARS powered on, on the right network, and ready for its first live connection from the course workspace.";
 chapterOneLessonOne.mdxPath = "content/lessons/foundations-connecting-to-the-mars-robot.mdx";
-chapterOneLessonOne.pretest = undefined;
 chapterOneLessonOne.exercise = {
   type: "mars-connect",
   title: "Connect to MARS",
@@ -218,19 +186,6 @@ const chapterOneLessonTwo = chapters[0].lessons[1];
 chapterOneLessonTwo.summary =
   "Understand what makes a machine a robot: sensing, deciding, and acting in the physical world.";
 chapterOneLessonTwo.mdxPath = "content/lessons/foundations-what-is-a-robot.mdx";
-chapterOneLessonTwo.pretest = {
-  type: "multiple-choice",
-  question: "Which description best captures what makes a system a robot?",
-  options: [
-    { id: "a", label: "Any machine that moves on its own, even if it cannot sense anything." },
-    { id: "b", label: "A physical system that can sense, decide, and act in the world." },
-    { id: "c", label: "Any computer program that follows instructions." },
-    { id: "d", label: "A remote-controlled machine with no onboard decision making." }
-  ],
-  correctOptionId: "b",
-  explanation:
-    "Robots combine sensing, computation, and physical action. Movement alone is not enough, and remote control alone is not autonomy."
-};
 chapterOneLessonTwo.exercise = {
   type: "blockly",
   title: "Meet MARS",
