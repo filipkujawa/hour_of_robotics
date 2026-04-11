@@ -57,6 +57,7 @@ export const toolboxConfig = {
       colour: "#fdcb6e",
       contents: [
         { kind: "block", type: "mars_say" },
+        { kind: "block", type: "mars_say_advanced" },
         {
           kind: "block",
           type: "mars_say_value",
@@ -66,8 +67,8 @@ export const toolboxConfig = {
             },
           },
         },
+        { kind: "block", type: "mars_set_volume" },
         { kind: "block", type: "mars_listen" },
-        { kind: "block", type: "mars_set_voice" },
         { kind: "block", type: "mars_play_sound" },
       ],
     },
@@ -103,6 +104,7 @@ export const toolboxConfig = {
       name: "Utilities",
       colour: "#636e72",
       contents: [
+        { kind: "block", type: "mars_random" },
         { kind: "block", type: "mars_wait" },
         { kind: "block", type: "mars_wait_until" },
         {

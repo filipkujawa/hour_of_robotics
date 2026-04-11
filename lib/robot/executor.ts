@@ -241,6 +241,17 @@ export class BlockExecutor {
         await this.robot.say(String(block.fields.TEXT || "Hello!"));
         break;
 
+      case "mars_say_advanced": {
+        const volume = Number(block.fields.VOLUME) || 80;
+        this.robot.setVolume(volume);
+        await this.robot.say(String(block.fields.TEXT || "Hello!"));
+        break;
+      }
+
+      case "mars_set_volume":
+        this.robot.setVolume(Number(block.fields.VOLUME) || 80);
+        break;
+
       case "mars_say_value": {
         const text = await this.evaluateValue(block.inputs.TEXT || null);
         await this.robot.say(String(text || ""));
@@ -429,6 +440,13 @@ export class BlockExecutor {
       case "mars_listen":
         this.onLog("Listening for speech...");
         return "";
+
+      // ---- Random ----
+      case "mars_random": {
+        const min = Number(block.fields.MIN) || 0;
+        const max = Number(block.fields.MAX) || 10;
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
 
       // ---- AI / Chat ----
       case "mars_chat_ask":

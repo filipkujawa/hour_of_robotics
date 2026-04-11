@@ -13,6 +13,17 @@ const waitBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Pause for a number of seconds",
   },
   {
+    type: "mars_random",
+    message0: "random %1 to %2",
+    args0: [
+      { type: "field_number", name: "MIN", value: 1 },
+      { type: "field_number", name: "MAX", value: 10 },
+    ],
+    output: "Number",
+    colour: "#636e72",
+    tooltip: "Returns a random whole number between min and max. Plug into print, say, movement, or variables.",
+  },
+  {
     type: "mars_print",
     message0: "print to console %1",
     args0: [{ type: "input_value", name: "VALUE" }],

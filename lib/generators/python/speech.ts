@@ -7,6 +7,19 @@ export function registerSpeechGenerators() {
     return `mars.say("${escaped}")\n`;
   };
 
+  pythonGenerator.forBlock["mars_say_advanced"] = function (block) {
+    const text = block.getFieldValue("TEXT");
+    const voice = block.getFieldValue("VOICE");
+    const volume = block.getFieldValue("VOLUME");
+    const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    return `mars.say("${escaped}", voice="${voice.toLowerCase()}", volume=${volume})\n`;
+  };
+
+  pythonGenerator.forBlock["mars_set_volume"] = function (block) {
+    const volume = block.getFieldValue("VOLUME");
+    return `mars.set_volume(${volume})\n`;
+  };
+
   pythonGenerator.forBlock["mars_say_value"] = function (block) {
     const text = pythonGenerator.valueToCode(block, "TEXT", Order.NONE) || '""';
     return `mars.say(${text})\n`;

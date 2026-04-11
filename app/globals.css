@@ -264,14 +264,14 @@ div.blocklyDropDownDiv[style] > div.blocklyDropDownArrow {
 
 /* ── Input fields ── */
 
-.blocklyWidgetDiv input,
-.blocklyWidgetDiv textarea {
+.blocklyWidgetDiv .blocklyHtmlInput {
   background: white !important;
   color: #1a1a19 !important;
   border: 2px solid #d97706 !important;
   border-radius: 4px !important;
-  padding: 4px 8px !important;
+  padding: 1px 2px !important;
   font-family: var(--font-jetbrains-mono), monospace !important;
+  box-sizing: content-box !important;
 }
 
 /* ── Tooltip ── */

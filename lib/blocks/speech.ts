@@ -11,6 +11,28 @@ const speechBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Make Mars speak a message out loud",
   },
   {
+    type: "mars_say_advanced",
+    message0: "say %1 voice %2 volume %3",
+    args0: [
+      { type: "field_input", name: "TEXT", text: "Hello!" },
+      {
+        type: "field_dropdown",
+        name: "VOICE",
+        options: [
+          ["friendly", "FRIENDLY"],
+          ["robot", "ROBOT"],
+          ["whisper", "WHISPER"],
+          ["excited", "EXCITED"],
+        ],
+      },
+      { type: "field_number", name: "VOLUME", value: 80, min: 0, max: 100 },
+    ],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#fdcb6e",
+    tooltip: "Speak with a specific voice and volume (0-100)",
+  },
+  {
     type: "mars_say_value",
     message0: "say %1",
     args0: [{ type: "input_value", name: "TEXT", check: "String" }],
@@ -18,6 +40,15 @@ const speechBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     nextStatement: null,
     colour: "#fdcb6e",
     tooltip: "Say the result of a plugged-in block — drag an oval block (AI response, sensor reading, variable) into the socket",
+  },
+  {
+    type: "mars_set_volume",
+    message0: "set volume to %1 %%",
+    args0: [{ type: "field_number", name: "VOLUME", value: 80, min: 0, max: 100 }],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#fdcb6e",
+    tooltip: "Set the robot speaker volume (0-100)",
   },
   {
     type: "mars_listen",
