@@ -6,7 +6,7 @@ import { pythonGenerator } from "blockly/python";
 import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown } from "lucide-react";
+import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box } from "lucide-react";
 
 import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
@@ -16,6 +16,9 @@ import { toolboxConfig } from "@/lib/blockly-config/toolbox";
 import { RobotConsole } from "./robot-console";
 import { ConnectDialog } from "./connect-dialog";
 import { MarsChat } from "./mars-chat";
+import { SimulationViewer } from "./rerun-viewer";
+import { simulationClient } from "@/lib/robot/simulation-client";
+import { BlockExecutor } from "@/lib/robot/executor";
 
 const g = globalThis as unknown as { __blocksRegistered?: boolean };
 
@@ -40,8 +43,34 @@ export function BlocklyWorkspace({
   const [connectOpen, setConnectOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showHints, setShowHints] = useState(false);
+  
+  const [simulationUrl, setSimulationUrl] = useState<string | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [activeOutputTab, setActiveOutputTab] = useState<"console" | "rerun">("console");
+  const [outputHeight, setOutputHeight] = useState(240);
+  const [isResizing, setIsResizing] = useState(false);
 
   const { status: connectionStatus, isRunning, logs, connect, disconnect, runWorkspace, stopExecution, clearLogs } = useRobot();
+
+  const startResizing = useCallback(() => setIsResizing(true), []);
+  const stopResizing = useCallback(() => setIsResizing(false), []);
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      const newHeight = window.innerHeight - e.clientY;
+      if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+        setOutputHeight(newHeight);
+      }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [resize, stopResizing]);
 
   const handleWorkspaceChange = useCallback(() => {
     const workspace = workspaceRef.current;
@@ -168,10 +197,27 @@ export function BlocklyWorkspace({
     }
     if (workspaceRef.current) {
       setShowConsole(true);
+      setActiveOutputTab("console");
       runWorkspace(workspaceRef.current);
     }
   };
 
+  const handleSimulate = async () => {
+    if (!workspaceRef.current) return;
+
+    setIsSimulating(true);
+    setShowConsole(true);
+    setActiveOutputTab("rerun");
+    try {
+      const blocks = BlockExecutor.serializeWorkspace(workspaceRef.current);
+      const { rerunUrl } = await simulationClient.simulate(blocks);
+      setSimulationUrl(rerunUrl);
+    } catch (err) {
+      console.error("Simulation failed:", err);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
   const handleCopy = async () => {
     await navigator.clipboard.writeText(generatedPython);
     setCopied(true);
@@ -264,7 +310,16 @@ export function BlocklyWorkspace({
                   </>
                 )}
               </div>
-              <div className="px-4 py-3 border-t border-[#e2e1de]">
+              <div className="px-4 py-3 border-t border-[#e2e1de] space-y-2">
+                <button 
+                  onClick={handleSimulate} 
+                  disabled={isSimulating}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-[#fafaf9] text-[#1a1a19] border border-[#e2e1de] rounded-md font-semibold text-[12px] transition-colors ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <Box className="h-3.5 w-3.5 text-[#d97706]" /> 
+                  {isSimulating ? "Simulating..." : "Simulate 3D"}
+                </button>
+
                 {!isRunning ? (
                   <button onClick={handleRun} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#1a1a19] hover:bg-[#333] text-white rounded-md font-semibold text-[12px] transition-colors">
                     <Play className="h-3.5 w-3.5" /> Run on MARS
@@ -281,33 +336,84 @@ export function BlocklyWorkspace({
           )}
         </div>
 
-        {/* Center: Blockly + Console */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Center: Blockly + Tabbed Output */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           <div className="flex-1 overflow-hidden">
             <div ref={hostRef} className="h-full w-full" />
           </div>
+          
           {showConsole && (
-            <div className="h-[180px] flex-shrink-0 border-t border-[#e2e1de]">
-              <RobotConsole logs={logs} onClear={clearLogs} />
+            <div 
+              style={{ height: `${outputHeight}px` }} 
+              className="flex-shrink-0 border-t border-[#e2e1de] bg-white flex flex-col overflow-hidden relative"
+            >
+              {/* Resize Handle */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-[#d97706]/30 transition-colors z-20"
+                onMouseDown={startResizing}
+              />
+
+              {/* Tabs Header */}
+              <div className="flex items-center justify-between px-4 h-9 border-b border-[#f0efed] bg-white">
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => setActiveOutputTab("console")}
+                    className={`px-3 h-9 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${activeOutputTab === "console" ? "border-[#d97706] text-[#1a1a19]" : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"}`}
+                  >
+                    <Terminal className="h-3 w-3" />
+                    Console
+                  </button>
+                  <button 
+                    onClick={() => setActiveOutputTab("rerun")}
+                    className={`px-3 h-9 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${activeOutputTab === "rerun" ? "border-[#d97706] text-[#1a1a19]" : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"}`}
+                  >
+                    <Box className="h-3 w-3" />
+                    Rerun Simulation
+                  </button>
+                </div>
+                <button 
+                  onClick={() => setShowConsole(false)}
+                  className="p-1.5 hover:bg-[#f0efed] rounded-md transition-colors"
+                >
+                  <ChevronDown className="h-3.5 w-3.5 text-[#9c9c9a]" />
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="flex-1 overflow-hidden bg-[#fafaf9]">
+                {activeOutputTab === "console" ? (
+                  <div className="h-full p-2">
+                    <RobotConsole logs={logs} onClear={clearLogs} />
+                  </div>
+                ) : (
+                  <div className="h-full p-2">
+                    <SimulationViewer url={simulationUrl} className="h-full" />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* Right: Code preview */}
         {showCode && (
-          <div className="w-[300px] flex-shrink-0 flex flex-col bg-white border-l border-[#e2e1de]">
+          <div className="w-[380px] flex-shrink-0 flex flex-col bg-white border-l border-[#e2e1de]">
+            {/* Code Output */}
             <div className="flex items-center justify-between px-3 h-9 border-b border-[#e2e1de]">
-              <span className="text-[11px] font-mono text-[#9c9c9a]">output.py</span>
+              <div className="flex items-center gap-1.5">
+                <Code2 className="h-3.5 w-3.5 text-[#9c9c9a]" />
+                <span className="text-[11px] font-mono text-[#9c9c9a]">output.py</span>
+              </div>
               <button onClick={handleCopy} className="text-[10px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors">{copied ? "Copied" : "Copy"}</button>
             </div>
             <div className="flex-1 overflow-auto bg-[#fafaf9]">
               {generatedPython ? (
-                <SyntaxHighlighter language="python" style={githubGist} customStyle={{ background: "#fafaf9", padding: "12px", margin: 0, fontSize: "12px", lineHeight: "1.75", height: "100%", fontFamily: "var(--font-mono), monospace" }} showLineNumbers lineNumberStyle={{ color: "#d4d3d0", minWidth: "2em", fontSize: "10px" }}>
+                <SyntaxHighlighter language="python" style={githubGist} customStyle={{ background: "#fafaf9", padding: "12px", margin: 0, fontSize: "11px", lineHeight: "1.75", height: "100%", fontFamily: "var(--font-mono), monospace" }} showLineNumbers lineNumberStyle={{ color: "#d4d3d0", minWidth: "2em", fontSize: "10px" }}>
                   {generatedPython}
                 </SyntaxHighlighter>
               ) : (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-[12px] text-[#d4d3d0]">Drag blocks to generate code</p>
+                  <p className="text-[11px] text-[#d4d3d0]">Drag blocks to generate code</p>
                 </div>
               )}
             </div>
