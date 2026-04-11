@@ -17,7 +17,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required progress fields." }, { status: 400 });
   }
 
-  // TODO: Persist progress to Supabase with the authenticated user session.
   return NextResponse.json({
     ok: true,
     saved: {

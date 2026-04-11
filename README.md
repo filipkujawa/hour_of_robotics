@@ -7,7 +7,6 @@ Interactive learning app for teaching robotics concepts through guided lessons, 
 - Next.js
 - TypeScript
 - Tailwind CSS
-- Supabase
 
 ## Development
 
@@ -15,5 +14,3 @@ Interactive learning app for teaching robotics concepts through guided lessons, 
 npm install
 npm run dev
 ```
-
-Create `.env.local` from `.env.example` and provide your own Supabase values before running the app.
