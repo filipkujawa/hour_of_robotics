@@ -39,7 +39,7 @@ export function BlocklyWorkspace({
   const [generatedPython, setGeneratedPython] = useState("");
   const [showCode, setShowCode] = useState(true);
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("exercise");
-  const [showConsole, setShowConsole] = useState(false);
+  const [showConsole, setShowConsole] = useState(true);
   const [connectOpen, setConnectOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showHints, setShowHints] = useState(false);
@@ -202,6 +202,17 @@ export function BlocklyWorkspace({
     }
   };
 
+  // Pre-load the robot model so Rerun never shows the welcome screen
+  useEffect(() => {
+    simulationClient.simulate([]).then(({ rerunUrl }) => {
+      setSimulationUrl(rerunUrl);
+    }).catch(() => {
+      // Simulation backend not running — that's fine
+    });
+  }, []);
+
+  const [simVersion, setSimVersion] = useState(0);
+
   const handleSimulate = async () => {
     if (!workspaceRef.current) return;
 
@@ -212,6 +223,7 @@ export function BlocklyWorkspace({
       const blocks = BlockExecutor.serializeWorkspace(workspaceRef.current);
       const { rerunUrl } = await simulationClient.simulate(blocks);
       setSimulationUrl(rerunUrl);
+      setSimVersion((v) => v + 1);
     } catch (err) {
       console.error("Simulation failed:", err);
     } finally {
@@ -363,12 +375,12 @@ export function BlocklyWorkspace({
                     <Terminal className="h-3 w-3" />
                     Console
                   </button>
-                  <button 
+                  <button
                     onClick={() => setActiveOutputTab("rerun")}
                     className={`px-3 h-9 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${activeOutputTab === "rerun" ? "border-[#d97706] text-[#1a1a19]" : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"}`}
                   >
                     <Box className="h-3 w-3" />
-                    Rerun Simulation
+                    Simulation
                   </button>
                 </div>
                 <button 
@@ -387,7 +399,7 @@ export function BlocklyWorkspace({
                   </div>
                 ) : (
                   <div className="h-full p-2">
-                    <SimulationViewer url={simulationUrl} className="h-full" />
+                    <SimulationViewer url={simulationUrl} version={simVersion} className="h-full" />
                   </div>
                 )}
               </div>
