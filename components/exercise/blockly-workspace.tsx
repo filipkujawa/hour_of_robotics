@@ -250,7 +250,7 @@ export function BlocklyWorkspace({
           </nav>
         </div>
         <div className="flex items-center gap-2.5">
-          <button onClick={() => setConnectOpen(true)} className="flex items-center gap-1.5 hover:bg-[#fafaf9] px-2 py-1 rounded transition-colors">
+          <button onClick={() => { Blockly.DropDownDiv.hideWithoutAnimation(); setConnectOpen(true); }} className="flex items-center gap-1.5 hover:bg-[#fafaf9] px-2 py-1 rounded transition-colors">
             <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === "connected" ? "bg-green-600" : connectionStatus === "connecting" ? "bg-amber-500 animate-pulse" : connectionStatus === "error" ? "bg-red-500" : "bg-[#d4d3d0]"}`} />
             <Wifi className="h-3 w-3 text-[#9c9c9a]" />
             <span className="text-[11px] text-[#9c9c9a]">{connectionStatus === "connected" ? "Connected" : connectionStatus === "connecting" ? "Connecting" : "Offline"}</span>
