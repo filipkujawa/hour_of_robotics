@@ -401,6 +401,24 @@ export function BlocklyWorkspace({
 
   const [simVersion, setSimVersion] = useState(0);
 
+  // Enter key triggers simulation when not typing in an input
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      // Don't trigger when typing in inputs/textareas (like the connect dialog or block fields)
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      // Don't trigger if Blockly's widget div (inline editor) is visible
+      if (document.querySelector(".blocklyWidgetDiv")?.children.length) return;
+      e.preventDefault();
+      handleSimulateRef.current();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const handleSimulateRef = useRef(() => {});
+
   const handleSimulate = async () => {
     if (!workspaceRef.current) return;
 
@@ -417,6 +435,8 @@ export function BlocklyWorkspace({
       setIsSimulating(false);
     }
   };
+
+  handleSimulateRef.current = handleSimulate;
 
   const handleOpenCameras = () => {
     focusWidget("camera");
