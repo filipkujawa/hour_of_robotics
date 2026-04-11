@@ -153,14 +153,29 @@ export class BlockExecutor {
         break;
 
       case "mars_joint_position": {
-        // hour_of_robotics named joint block
-        const joint = String(block.fields.JOINT || "shoulder");
-        const value = Number(block.fields.VALUE) || 0;
-        this.onLog(`Joint ${joint} -> ${value} deg`);
-        const joints = [0, 0, 0, 0, 0, 0, 0];
-        const jointMap: Record<string, number> = { shoulder: 1, elbow: 2, wrist: 3 };
-        joints[jointMap[joint] ?? 0] = value;
+        const jointIndex = Number(block.fields.JOINT) || 1;
+        const angle = Number(block.fields.ANGLE) || 0;
+        const radians = (angle * Math.PI) / 180;
+        this.onLog(`Joint ${jointIndex} -> ${angle}°`);
+        // Build a 6-element array, set only the target joint
+        const joints = [0, 0, 0, 0, 0, 0];
+        joints[jointIndex - 1] = radians;
         await this.robot.armGoToJoints(joints);
+        break;
+      }
+
+      case "mars_all_joints": {
+        const degs = [
+          Number(block.fields.J1) || 0,
+          Number(block.fields.J2) || 0,
+          Number(block.fields.J3) || 0,
+          Number(block.fields.J4) || 0,
+          Number(block.fields.J5) || 0,
+          Number(block.fields.J6) || 0,
+        ];
+        const rads = degs.map((d) => (d * Math.PI) / 180);
+        this.onLog(`All joints -> [${degs.join(", ")}]°`);
+        await this.robot.armGoToJoints(rads);
         break;
       }
 

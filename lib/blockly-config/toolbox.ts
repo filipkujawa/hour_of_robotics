@@ -32,6 +32,8 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_gripper" },
         { kind: "block", type: "mars_wave" },
         { kind: "block", type: "mars_pick_up" },
+        { kind: "block", type: "mars_joint_position" },
+        { kind: "block", type: "mars_all_joints" },
         { kind: "block", type: "mars_arm_torque_off" },
         { kind: "block", type: "mars_arm_torque_on" },
       ],

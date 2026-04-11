@@ -25,6 +25,22 @@ export function registerArmGenerators() {
     return "mars.pick_up()\n";
   };
 
+  pythonGenerator.forBlock["mars_joint_position"] = function (block) {
+    const joint = block.getFieldValue("JOINT");
+    const angle = block.getFieldValue("ANGLE");
+    return `mars.set_joint(${joint}, ${angle})\n`;
+  };
+
+  pythonGenerator.forBlock["mars_all_joints"] = function (block) {
+    const j1 = block.getFieldValue("J1");
+    const j2 = block.getFieldValue("J2");
+    const j3 = block.getFieldValue("J3");
+    const j4 = block.getFieldValue("J4");
+    const j5 = block.getFieldValue("J5");
+    const j6 = block.getFieldValue("J6");
+    return `mars.set_all_joints(${j1}, ${j2}, ${j3}, ${j4}, ${j5}, ${j6})\n`;
+  };
+
   pythonGenerator.forBlock["mars_arm_torque_off"] = function () {
     return "mars.arm_torque_off()\n";
   };
