@@ -6,7 +6,7 @@ import { pythonGenerator } from "blockly/python";
 import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box, Download, Upload, Save } from "lucide-react";
+import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box, Download, Upload, Save, Camera } from "lucide-react";
 
 import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
@@ -17,12 +17,14 @@ import { RobotConsole } from "./robot-console";
 import { ConnectDialog } from "./connect-dialog";
 import { MarsChat } from "./mars-chat";
 import { SimulationViewer } from "./rerun-viewer";
+import { CameraFeedWidget } from "./camera-feed-widget";
 import { simulationClient } from "@/lib/robot/simulation-client";
 import { BlockExecutor } from "@/lib/robot/executor";
 
 const g = globalThis as unknown as { __blocksRegistered?: boolean };
 
 type LeftPanel = "exercise" | "chat";
+type OutputTab = "console" | "rerun" | "camera";
 
 export function BlocklyWorkspace({
   exercise,
@@ -46,11 +48,21 @@ export function BlocklyWorkspace({
   
   const [simulationUrl, setSimulationUrl] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [activeOutputTab, setActiveOutputTab] = useState<"console" | "rerun">("console");
+  const [activeOutputTab, setActiveOutputTab] = useState<OutputTab>("console");
   const [outputHeight, setOutputHeight] = useState(240);
   const [isResizing, setIsResizing] = useState(false);
 
-  const { status: connectionStatus, isRunning, logs, connect, disconnect, runWorkspace, stopExecution, clearLogs } = useRobot();
+  const {
+    status: connectionStatus,
+    isRunning,
+    logs,
+    connect,
+    disconnect,
+    runWorkspace,
+    stopExecution,
+    clearLogs,
+    connectionUrl,
+  } = useRobot();
 
   const startResizing = useCallback(() => setIsResizing(true), []);
   const stopResizing = useCallback(() => setIsResizing(false), []);
@@ -166,7 +178,6 @@ export function BlocklyWorkspace({
       };
     }
 
-    // Load initial XML if provided
     if (exercise.initialXml) {
       try {
         Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(exercise.initialXml), workspace);
@@ -230,6 +241,15 @@ export function BlocklyWorkspace({
       setIsSimulating(false);
     }
   };
+
+  const handleOpenCameras = () => {
+    setShowConsole(true);
+    setActiveOutputTab("camera");
+    if (connectionStatus !== "connected") {
+      setConnectOpen(true);
+    }
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(generatedPython);
     setCopied(true);
@@ -307,7 +327,6 @@ export function BlocklyWorkspace({
 
   return (
     <div className="h-screen w-screen fixed inset-0 z-50 flex flex-col bg-[#f5f5f4] text-[#1a1a19] overflow-hidden">
-      {/* ── Top Bar ── */}
       <header className="h-11 flex items-center justify-between px-4 bg-white border-b border-[#e2e1de] flex-shrink-0">
         <div className="flex items-center gap-4">
           <button
@@ -356,9 +375,7 @@ export function BlocklyWorkspace({
         </div>
       </header>
 
-      {/* ── Main ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left panel */}
         <div className="w-[280px] flex-shrink-0 bg-white border-r border-[#e2e1de] flex flex-col overflow-hidden">
           {leftPanel === "exercise" ? (
             <div className="flex flex-col h-full overflow-hidden">
@@ -399,6 +416,14 @@ export function BlocklyWorkspace({
                 )}
               </div>
               <div className="px-4 py-3 border-t border-[#e2e1de] space-y-2">
+                <button
+                  onClick={handleOpenCameras}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#f7f4ee] hover:bg-[#f2eee6] text-[#1a1a19] border border-[#e2d8ca] rounded-md font-semibold text-[12px] transition-colors"
+                >
+                  <Camera className="h-3.5 w-3.5 text-[#d97706]" />
+                  View Cameras
+                </button>
+
                 <button 
                   onClick={handleSimulate} 
                   disabled={isSimulating}
@@ -424,7 +449,6 @@ export function BlocklyWorkspace({
           )}
         </div>
 
-        {/* Center: Blockly + Tabbed Output */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
           <div className="flex-1 overflow-hidden">
             <div ref={hostRef} className="h-full w-full" />
@@ -435,13 +459,11 @@ export function BlocklyWorkspace({
               style={{ height: `${outputHeight}px` }} 
               className="flex-shrink-0 border-t border-[#e2e1de] bg-white flex flex-col overflow-hidden relative"
             >
-              {/* Resize Handle */}
               <div 
                 className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-[#d97706]/30 transition-colors z-20"
                 onMouseDown={startResizing}
               />
 
-              {/* Tabs Header */}
               <div className="flex items-center justify-between px-4 h-9 border-b border-[#f0efed] bg-white">
                 <div className="flex items-center gap-1">
                   <button 
@@ -458,6 +480,13 @@ export function BlocklyWorkspace({
                     <Box className="h-3 w-3" />
                     Simulation
                   </button>
+                  <button
+                    onClick={() => setActiveOutputTab("camera")}
+                    className={`px-3 h-9 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${activeOutputTab === "camera" ? "border-[#d97706] text-[#1a1a19]" : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"}`}
+                  >
+                    <Camera className="h-3 w-3" />
+                    Camera Feed
+                  </button>
                 </div>
                 <button 
                   onClick={() => setShowConsole(false)}
@@ -467,15 +496,23 @@ export function BlocklyWorkspace({
                 </button>
               </div>
 
-              {/* Tab Content */}
               <div className="flex-1 overflow-hidden bg-[#fafaf9]">
                 {activeOutputTab === "console" ? (
                   <div className="h-full p-2">
                     <RobotConsole logs={logs} onClear={clearLogs} />
                   </div>
-                ) : (
+                ) : activeOutputTab === "rerun" ? (
                   <div className="h-full p-2">
                     <SimulationViewer url={simulationUrl} version={simVersion} className="h-full" />
+                  </div>
+                ) : (
+                  <div className="h-full p-2">
+                    <CameraFeedWidget
+                      wsUrl={connectionUrl}
+                      isRobotConnected={connectionStatus === "connected"}
+                      active={activeOutputTab === "camera" && showConsole}
+                      className="h-full"
+                    />
                   </div>
                 )}
               </div>
@@ -483,10 +520,8 @@ export function BlocklyWorkspace({
           )}
         </div>
 
-        {/* Right: Code preview */}
         {showCode && (
           <div className="w-[380px] flex-shrink-0 flex flex-col bg-white border-l border-[#e2e1de]">
-            {/* Code Output */}
             <div className="flex items-center justify-between px-3 h-9 border-b border-[#e2e1de]">
               <div className="flex items-center gap-1.5">
                 <Code2 className="h-3.5 w-3.5 text-[#9c9c9a]" />

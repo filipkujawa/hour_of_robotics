@@ -15,6 +15,7 @@ export function useRobot() {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [connectionUrl, setConnectionUrl] = useState("ws://mars.local:9090");
 
   const robotRef = useRef<RobotConnection | null>(null);
   const executorRef = useRef<BlockExecutor | null>(null);
@@ -28,17 +29,19 @@ export function useRobot() {
   }, []);
 
   const connect = useCallback(async (url?: string) => {
+    const resolvedUrl = url || "ws://mars.local:9090";
     if (robotRef.current) {
       robotRef.current.disconnect();
     }
 
     const robot = new RobotConnection({
-      url: url || "ws://mars.local:9090",
+      url: resolvedUrl,
       onStatusChange: setStatus,
       onError: (msg) => addLog(msg, "error"),
       onLog: (msg) => addLog(msg, "info"),
     });
 
+    setConnectionUrl(resolvedUrl);
     robotRef.current = robot;
     executorRef.current = new BlockExecutor(robot, (msg) => addLog(msg, "info"));
 
@@ -111,6 +114,7 @@ export function useRobot() {
     status,
     isRunning,
     logs,
+    connectionUrl,
     connect,
     disconnect,
     runWorkspace,
