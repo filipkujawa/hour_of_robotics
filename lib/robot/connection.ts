@@ -34,6 +34,14 @@ export class RobotConnection {
   private lightService: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private headTopic: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private ttsTopic: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private chatInTopic: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private armTorqueOffService: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private armTorqueOnService: any = null;
 
   constructor(options: RobotConnectionOptions = {}) {
     this.url = options.url || "ws://mars.local:9090";
@@ -93,6 +101,10 @@ export class RobotConnection {
     this.armService = null;
     this.lightService = null;
     this.headTopic = null;
+    this.ttsTopic = null;
+    this.chatInTopic = null;
+    this.armTorqueOffService = null;
+    this.armTorqueOnService = null;
   }
 
   private initTopicsAndServices(roslib: typeof import("roslib")) {
@@ -120,6 +132,30 @@ export class RobotConnection {
       ros: this.ros,
       name: "/light_command",
       serviceType: "maurice_msgs/LightCommand",
+    });
+
+    this.ttsTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/brain/tts",
+      messageType: "std_msgs/String",
+    });
+
+    this.chatInTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/brain/chat_in",
+      messageType: "std_msgs/String",
+    });
+
+    this.armTorqueOffService = new roslib.Service({
+      ros: this.ros,
+      name: "/mars/arm/torque_off",
+      serviceType: "std_srvs/Trigger",
+    });
+
+    this.armTorqueOnService = new roslib.Service({
+      ros: this.ros,
+      name: "/mars/arm/torque_on",
+      serviceType: "std_srvs/Trigger",
     });
   }
 
@@ -258,6 +294,134 @@ export class RobotConnection {
   }
 
   // ==========================================
+  // Navigation
+  // ==========================================
+
+  async navigateTo(x: number, y: number): Promise<void> {
+    if (!this.ros) {
+      this.onError("Not connected");
+      return;
+    }
+
+    const roslib = await getRoslib();
+    this.onLog(`Navigating to (${x}, ${y})...`);
+
+    return new Promise((resolve, reject) => {
+      const actionClient = new roslib.ActionClient({
+        ros: this.ros,
+        serverName: "/navigate_to_pose",
+        actionName: "nav2_msgs/NavigateToPose",
+      });
+
+      const goal = new roslib.Goal({
+        actionClient,
+        goalMessage: {
+          pose: {
+            header: { frame_id: "map" },
+            pose: {
+              position: { x, y, z: 0.0 },
+              orientation: { x: 0, y: 0, z: 0, w: 1 },
+            },
+          },
+        },
+      });
+
+      goal.on("result", () => {
+        this.onLog(`Arrived at (${x}, ${y})`);
+        resolve();
+      });
+
+      goal.on("timeout", () => {
+        this.onError("Navigation timed out");
+        reject(new Error("timeout"));
+      });
+
+      goal.send();
+    });
+  }
+
+  async spinInPlace(degrees: number): Promise<void> {
+    if (!this.ros) {
+      this.onError("Not connected");
+      return;
+    }
+
+    const roslib = await getRoslib();
+    const radians = (degrees * Math.PI) / 180;
+    this.onLog(`Spinning ${degrees} degrees...`);
+
+    return new Promise((resolve, reject) => {
+      const actionClient = new roslib.ActionClient({
+        ros: this.ros,
+        serverName: "/spin",
+        actionName: "nav2_msgs/Spin",
+      });
+
+      const goal = new roslib.Goal({
+        actionClient,
+        goalMessage: { target_yaw: radians },
+      });
+
+      goal.on("result", () => {
+        this.onLog("Spin complete");
+        resolve();
+      });
+
+      goal.on("timeout", () => {
+        this.onError("Spin timed out");
+        reject(new Error("timeout"));
+      });
+
+      goal.send();
+    });
+  }
+
+  // ==========================================
+  // AI / Chat
+  // ==========================================
+
+  async chatAsk(message: string): Promise<string> {
+    if (!this.ros || !this.chatInTopic) return "";
+    const roslib = await getRoslib();
+    this.onLog(`Asking AI: "${message}"`);
+
+    return new Promise((resolve) => {
+      const chatOutTopic = new roslib.Topic({
+        ros: this.ros,
+        name: "/brain/chat_out",
+        messageType: "std_msgs/String",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (msg: any) => {
+        chatOutTopic.unsubscribe();
+        const response = msg.data as string;
+        this.onLog(`AI response: "${response}"`);
+        resolve(response);
+      };
+
+      chatOutTopic.subscribe(handler);
+      this.chatInTopic.publish({ data: message });
+
+      // Timeout after 15 seconds
+      setTimeout(() => {
+        chatOutTopic.unsubscribe();
+        resolve("");
+      }, 15000);
+    });
+  }
+
+  chatSay(text: string) {
+    if (!this.ttsTopic) {
+      this.onError("Not connected");
+      return;
+    }
+
+    this.onLog(`TTS: "${text}"`);
+    this.ttsTopic.publish({ data: text });
+  }
+
+  // ==========================================
   // Head
   // ==========================================
 
@@ -300,6 +464,84 @@ export class RobotConnection {
 
       topic.subscribe(handler);
       setTimeout(() => { topic.unsubscribe(); resolve(-1); }, 2000);
+    });
+  }
+
+  async getBattery(): Promise<number> {
+    if (!this.ros) return -1;
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/battery_state",
+        messageType: "sensor_msgs/BatteryState",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        topic.unsubscribe();
+        const pct = Math.round((message.percentage ?? 0) * 100);
+        resolve(pct);
+      };
+
+      topic.subscribe(handler);
+      setTimeout(() => { topic.unsubscribe(); resolve(-1); }, 2000);
+    });
+  }
+
+  async getHeading(): Promise<number> {
+    if (!this.ros) return -1;
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/odom",
+        messageType: "nav_msgs/Odometry",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        topic.unsubscribe();
+        const q = message.pose.pose.orientation;
+        const siny = 2.0 * (q.w * q.z + q.x * q.y);
+        const cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+        let yaw = Math.atan2(siny, cosy) * (180 / Math.PI);
+        if (yaw < 0) yaw += 360;
+        resolve(Math.round(yaw));
+      };
+
+      topic.subscribe(handler);
+      setTimeout(() => { topic.unsubscribe(); resolve(-1); }, 2000);
+    });
+  }
+
+  // ==========================================
+  // Arm (torque)
+  // ==========================================
+
+  async armTorqueOff(): Promise<void> {
+    if (!this.armTorqueOffService) return;
+
+    return new Promise((resolve, reject) => {
+      this.armTorqueOffService.callService(
+        {},
+        () => { this.onLog("Arm torque OFF — freedrive enabled"); resolve(); },
+        (err: string) => { this.onError(`Torque off error: ${err}`); reject(new Error(err)); }
+      );
+    });
+  }
+
+  async armTorqueOn(): Promise<void> {
+    if (!this.armTorqueOnService) return;
+
+    return new Promise((resolve, reject) => {
+      this.armTorqueOnService.callService(
+        {},
+        () => { this.onLog("Arm torque ON — holding position"); resolve(); },
+        (err: string) => { this.onError(`Torque on error: ${err}`); reject(new Error(err)); }
+      );
     });
   }
 

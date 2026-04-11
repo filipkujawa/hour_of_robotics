@@ -62,6 +62,20 @@ const sensorBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     colour: "#0984e3",
     tooltip: "Get the x or y position of a detected object in the camera frame",
   },
+  {
+    type: "mars_get_battery",
+    message0: "battery level %",
+    output: "Number",
+    colour: "#0984e3",
+    tooltip: "Get the current battery percentage (0-100)",
+  },
+  {
+    type: "mars_get_heading",
+    message0: "robot heading (degrees)",
+    output: "Number",
+    colour: "#0984e3",
+    tooltip: "Get the robot's current heading from odometry (0-360 degrees)",
+  },
 ]);
 
 export default sensorBlocks;

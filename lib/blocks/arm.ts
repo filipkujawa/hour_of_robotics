@@ -56,6 +56,22 @@ const armBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     colour: "#e17055",
     tooltip: "Attempt to pick up the nearest object",
   },
+  {
+    type: "mars_arm_torque_off",
+    message0: "arm torque off (freedrive)",
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#e17055",
+    tooltip: "Disable arm servo torque so you can move the arm by hand",
+  },
+  {
+    type: "mars_arm_torque_on",
+    message0: "arm torque on (lock)",
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#e17055",
+    tooltip: "Re-enable arm servo torque to hold position",
+  },
 ]);
 
 export default armBlocks;

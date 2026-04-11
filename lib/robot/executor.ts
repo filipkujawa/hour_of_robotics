@@ -189,6 +189,32 @@ export class BlockExecutor {
         await this.robot.pickUp();
         break;
 
+      case "mars_arm_torque_off":
+        await this.robot.armTorqueOff();
+        break;
+
+      case "mars_arm_torque_on":
+        await this.robot.armTorqueOn();
+        break;
+
+      // ---- Navigation ----
+      case "mars_navigate_to":
+        await this.robot.navigateTo(
+          Number(block.fields.X) || 0,
+          Number(block.fields.Y) || 0
+        );
+        break;
+
+      case "mars_spin":
+        await this.robot.spinInPlace(Number(block.fields.DEGREES) || 180);
+        break;
+
+      // ---- AI / Chat ----
+      case "mars_chat_say":
+        this.robot.chatSay(String(block.fields.TEXT || "Hello!"));
+        await new Promise((r) => setTimeout(r, 500));
+        break;
+
       // ---- Head ----
       case "mars_head_tilt":
         this.robot.setHeadTilt(Number(block.fields.DEGREES) || 0);
@@ -381,6 +407,17 @@ export class BlockExecutor {
       case "mars_listen":
         this.onLog("Listening for speech...");
         return "";
+
+      // ---- Battery & Heading ----
+      case "mars_get_battery":
+        return await this.robot.getBattery();
+
+      case "mars_get_heading":
+        return await this.robot.getHeading();
+
+      // ---- AI / Chat ----
+      case "mars_chat_ask":
+        return await this.robot.chatAsk(String(block.fields.MESSAGE || ""));
 
       default:
         return 0;

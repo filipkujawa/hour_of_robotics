@@ -22,4 +22,12 @@ export function registerSensorGenerators() {
       Order.FUNCTION_CALL,
     ];
   };
+
+  pythonGenerator.forBlock["mars_get_battery"] = function () {
+    return ["mars.get_battery()", Order.FUNCTION_CALL];
+  };
+
+  pythonGenerator.forBlock["mars_get_heading"] = function () {
+    return ["mars.get_heading()", Order.FUNCTION_CALL];
+  };
 }

@@ -24,4 +24,12 @@ export function registerArmGenerators() {
   pythonGenerator.forBlock["mars_pick_up"] = function () {
     return "mars.pick_up()\n";
   };
+
+  pythonGenerator.forBlock["mars_arm_torque_off"] = function () {
+    return "mars.arm_torque_off()\n";
+  };
+
+  pythonGenerator.forBlock["mars_arm_torque_on"] = function () {
+    return "mars.arm_torque_on()\n";
+  };
 }

@@ -15,6 +15,15 @@ export const toolboxConfig = {
     },
     {
       kind: "category",
+      name: "Navigation",
+      colour: "#00cec9",
+      contents: [
+        { kind: "block", type: "mars_navigate_to" },
+        { kind: "block", type: "mars_spin" },
+      ],
+    },
+    {
+      kind: "category",
       name: "Arm & Gripper",
       colour: "#e17055",
       contents: [
@@ -23,6 +32,8 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_gripper" },
         { kind: "block", type: "mars_wave" },
         { kind: "block", type: "mars_pick_up" },
+        { kind: "block", type: "mars_arm_torque_off" },
+        { kind: "block", type: "mars_arm_torque_on" },
       ],
     },
     {
@@ -34,6 +45,8 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_see_object" },
         { kind: "block", type: "mars_take_photo" },
         { kind: "block", type: "mars_get_object_position" },
+        { kind: "block", type: "mars_get_battery" },
+        { kind: "block", type: "mars_get_heading" },
       ],
     },
     {
@@ -45,6 +58,15 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_listen" },
         { kind: "block", type: "mars_set_voice" },
         { kind: "block", type: "mars_play_sound" },
+      ],
+    },
+    {
+      kind: "category",
+      name: "AI / Chat",
+      colour: "#6c5ce7",
+      contents: [
+        { kind: "block", type: "mars_chat_ask" },
+        { kind: "block", type: "mars_chat_say" },
       ],
     },
     {
