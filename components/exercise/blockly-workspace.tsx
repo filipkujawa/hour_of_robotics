@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type DragEvent } from "react";
 import * as Blockly from "blockly";
 import { pythonGenerator } from "blockly/python";
 import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box, Download, Upload, Save, Camera } from "lucide-react";
+import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box, Download, Upload, Camera } from "lucide-react";
 
 import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
@@ -25,7 +25,25 @@ import { BlockExecutor } from "@/lib/robot/executor";
 const g = globalThis as unknown as { __blocksRegistered?: boolean };
 
 type LeftPanel = "exercise" | "chat";
-type OutputTab = "console" | "rerun" | "camera";
+type WidgetId = "console" | "rerun" | "camera" | "python";
+type PaneId = "bottom" | "right";
+
+const DEFAULT_WIDGET_LAYOUT: Record<PaneId, WidgetId[]> = {
+  bottom: ["console", "rerun", "camera"],
+  right: ["python"],
+};
+
+const DEFAULT_ACTIVE_WIDGET: Record<PaneId, WidgetId | null> = {
+  bottom: "console",
+  right: "python",
+};
+
+const WIDGET_META: Record<WidgetId, { label: string; icon: typeof Terminal }> = {
+  console: { label: "Console", icon: Terminal },
+  rerun: { label: "Simulation", icon: Box },
+  camera: { label: "Camera Feed", icon: Camera },
+  python: { label: "Python", icon: Code2 },
+};
 
 export function BlocklyWorkspace({
   exercise,
@@ -40,18 +58,18 @@ export function BlocklyWorkspace({
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
 
   const [generatedPython, setGeneratedPython] = useState("");
-  const [showCode, setShowCode] = useState(true);
   const [leftPanel, setLeftPanel] = useState<LeftPanel>("exercise");
-  const [showConsole, setShowConsole] = useState(true);
   const [connectOpen, setConnectOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showHints, setShowHints] = useState(false);
-  
   const [simulationUrl, setSimulationUrl] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [activeOutputTab, setActiveOutputTab] = useState<OutputTab>("console");
   const [outputHeight, setOutputHeight] = useState(240);
   const [isResizing, setIsResizing] = useState(false);
+  const [widgetsByPane, setWidgetsByPane] = useState<Record<PaneId, WidgetId[]>>(DEFAULT_WIDGET_LAYOUT);
+  const [activeWidgetByPane, setActiveWidgetByPane] = useState<Record<PaneId, WidgetId | null>>(DEFAULT_ACTIVE_WIDGET);
+  const [visiblePanes, setVisiblePanes] = useState<Record<PaneId, boolean>>({ bottom: true, right: true });
+  const [draggingWidget, setDraggingWidget] = useState<WidgetId | null>(null);
 
   const {
     status: connectionStatus,
@@ -98,6 +116,83 @@ export function BlocklyWorkspace({
       window.removeEventListener("mouseup", stopResizing);
     };
   }, [resize, stopResizing]);
+
+  const findWidgetPane = useCallback(
+    (widgetId: WidgetId) =>
+      (Object.entries(widgetsByPane).find(([, widgetIds]) => widgetIds.includes(widgetId))?.[0] as PaneId | undefined) ?? null,
+    [widgetsByPane],
+  );
+
+  const setActiveWidget = useCallback((paneId: PaneId, widgetId: WidgetId | null) => {
+    setActiveWidgetByPane((current) => ({ ...current, [paneId]: widgetId }));
+  }, []);
+
+  const focusWidget = useCallback(
+    (widgetId: WidgetId) => {
+      const paneId = findWidgetPane(widgetId);
+      if (!paneId) return;
+
+      setVisiblePanes((current) => ({ ...current, [paneId]: true }));
+      setActiveWidget(paneId, widgetId);
+    },
+    [findWidgetPane, setActiveWidget],
+  );
+
+  const moveWidget = useCallback((widgetId: WidgetId, targetPaneId: PaneId, targetIndex?: number) => {
+    setWidgetsByPane((current) => {
+      const sourcePaneId =
+        (Object.entries(current).find(([, widgetIds]) => widgetIds.includes(widgetId))?.[0] as PaneId | undefined) ?? null;
+      if (!sourcePaneId) return current;
+
+      const next: Record<PaneId, WidgetId[]> = {
+        bottom: current.bottom.filter((id) => id !== widgetId),
+        right: current.right.filter((id) => id !== widgetId),
+      };
+
+      const destination = [...next[targetPaneId]];
+      const insertIndex =
+        typeof targetIndex === "number" ? Math.max(0, Math.min(targetIndex, destination.length)) : destination.length;
+      destination.splice(insertIndex, 0, widgetId);
+      next[targetPaneId] = destination;
+
+      setActiveWidgetByPane((currentActive) => {
+        const nextActive = { ...currentActive };
+        const sourceWidgets = next[sourcePaneId];
+        const targetWidgets = next[targetPaneId];
+
+        if (!sourceWidgets.includes(nextActive[sourcePaneId] as WidgetId)) {
+          nextActive[sourcePaneId] = sourceWidgets[0] ?? null;
+        }
+        nextActive[targetPaneId] = widgetId;
+
+        return nextActive;
+      });
+
+      setVisiblePanes((currentVisible) => ({
+        ...currentVisible,
+        [targetPaneId]: true,
+      }));
+
+      return next;
+    });
+  }, []);
+
+  const handlePaneDrop = useCallback(
+    (event: DragEvent<HTMLElement>, paneId: PaneId, targetIndex?: number) => {
+      event.preventDefault();
+      const widgetId = event.dataTransfer.getData("text/widget-id") as WidgetId;
+      if (!widgetId) return;
+
+      moveWidget(widgetId, paneId, targetIndex);
+      setDraggingWidget(null);
+    },
+    [moveWidget],
+  );
+
+  const handlePaneDragOver = useCallback((event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
 
   const handleWorkspaceChange = useCallback(() => {
     const workspace = workspaceRef.current;
@@ -222,8 +317,7 @@ export function BlocklyWorkspace({
       return;
     }
     if (workspaceRef.current) {
-      setShowConsole(true);
-      setActiveOutputTab("console");
+      focusWidget("console");
       runWorkspace(workspaceRef.current);
     }
   };
@@ -243,8 +337,7 @@ export function BlocklyWorkspace({
     if (!workspaceRef.current) return;
 
     setIsSimulating(true);
-    setShowConsole(true);
-    setActiveOutputTab("rerun");
+    focusWidget("rerun");
     try {
       const blocks = BlockExecutor.serializeWorkspace(workspaceRef.current);
       const { rerunUrl } = await simulationClient.simulate(blocks);
@@ -258,8 +351,7 @@ export function BlocklyWorkspace({
   };
 
   const handleOpenCameras = () => {
-    setShowConsole(true);
-    setActiveOutputTab("camera");
+    focusWidget("camera");
     if (connectionStatus !== "connected") {
       setConnectOpen(true);
     }
@@ -340,6 +432,141 @@ export function BlocklyWorkspace({
     input.click();
   };
 
+  const consolePane = findWidgetPane("console");
+  const pythonPane = findWidgetPane("python");
+  const isCameraWidgetActive = (() => {
+    const paneId = findWidgetPane("camera");
+    return paneId !== null && visiblePanes[paneId] && activeWidgetByPane[paneId] === "camera";
+  })();
+
+  const renderWidgetContent = (widgetId: WidgetId) => {
+    switch (widgetId) {
+      case "console":
+        return <RobotConsole logs={logs} onClear={clearLogs} />;
+      case "rerun":
+        return <SimulationViewer url={simulationUrl} version={simVersion} className="h-full" />;
+      case "camera":
+        return (
+          <CameraFeedWidget
+            wsUrl={connectionUrl}
+            isRobotConnected={connectionStatus === "connected"}
+            active={isCameraWidgetActive}
+            className="h-full"
+          />
+        );
+      case "python":
+        return generatedPython ? (
+          <SyntaxHighlighter
+            language="python"
+            style={githubGist}
+            customStyle={{
+              background: "#fafaf9",
+              padding: "12px",
+              margin: 0,
+              fontSize: "11px",
+              lineHeight: "1.75",
+              height: "100%",
+              fontFamily: "var(--font-mono), monospace",
+            }}
+            showLineNumbers
+            lineNumberStyle={{ color: "#d4d3d0", minWidth: "2em", fontSize: "10px" }}
+          >
+            {generatedPython}
+          </SyntaxHighlighter>
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-[11px] text-[#d4d3d0]">Drag blocks to generate code</p>
+          </div>
+        );
+    }
+  };
+
+  const renderWidgetPane = ({
+    paneId,
+    className,
+    bodyClassName,
+    title,
+  }: {
+    paneId: PaneId;
+    className: string;
+    bodyClassName: string;
+    title: string;
+  }) => {
+    const widgetIds = widgetsByPane[paneId];
+    const activeWidget = activeWidgetByPane[paneId] && widgetIds.includes(activeWidgetByPane[paneId] as WidgetId)
+      ? (activeWidgetByPane[paneId] as WidgetId)
+      : (widgetIds[0] ?? null);
+    const showCopyButton = activeWidget === "python";
+
+    return (
+      <div className={className}>
+        <div
+          className="flex items-center justify-between border-b border-[#f0efed] bg-white px-4 h-9"
+          onDragOver={handlePaneDragOver}
+          onDrop={(event) => handlePaneDrop(event, paneId)}
+        >
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+            {widgetIds.map((widgetId, index) => {
+              const meta = WIDGET_META[widgetId];
+              const Icon = meta.icon;
+
+              return (
+                <button
+                  key={widgetId}
+                  type="button"
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData("text/widget-id", widgetId);
+                    event.dataTransfer.effectAllowed = "move";
+                    setDraggingWidget(widgetId);
+                  }}
+                  onDragEnd={() => setDraggingWidget(null)}
+                  onDragOver={handlePaneDragOver}
+                  onDrop={(event) => handlePaneDrop(event, paneId, index)}
+                  onClick={() => setActiveWidget(paneId, widgetId)}
+                  className={`px-3 h-9 shrink-0 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${
+                    activeWidget === widgetId
+                      ? "border-[#d97706] text-[#1a1a19]"
+                      : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"
+                  } ${draggingWidget === widgetId ? "opacity-50" : ""}`}
+                  title={`Drag ${meta.label} to another pane`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {meta.label}
+                </button>
+              );
+            })}
+            {widgetIds.length === 0 && (
+              <div className="px-3 text-[11px] text-[#b4b1ab]">{title}</div>
+            )}
+          </div>
+          {showCopyButton && (
+            <button
+              onClick={handleCopy}
+              className="px-2 text-[10px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors"
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+          )}
+        </div>
+
+        <div
+          className={bodyClassName}
+          onDragOver={handlePaneDragOver}
+          onDrop={(event) => handlePaneDrop(event, paneId)}
+        >
+          {activeWidget ? (
+            <div className="h-full p-2">{renderWidgetContent(activeWidget)}</div>
+          ) : (
+            <div className="flex h-full items-center justify-center px-6 text-center text-[12px] text-[#9c9c9a]">
+              Drag a widget here to populate this pane.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-screen w-screen fixed inset-0 z-50 flex flex-col bg-[#f5f5f4] text-[#1a1a19] overflow-hidden">
       <header className="h-11 flex items-center justify-between px-4 bg-white border-b border-[#e2e1de] flex-shrink-0">
@@ -378,11 +605,11 @@ export function BlocklyWorkspace({
             <Upload className="h-3.5 w-3.5" />
           </button>
           <div className="h-4 w-px bg-[#e2e1de]" />
-          <button onClick={() => setShowConsole(!showConsole)} className={`text-[11px] px-2 py-1 rounded flex items-center gap-1.5 transition-all ${showConsole ? "bg-[#f0efed] text-[#1a1a19]" : "text-[#9c9c9a] hover:text-[#6b6b69]"}`}>
+          <button onClick={() => focusWidget("console")} className={`text-[11px] px-2 py-1 rounded flex items-center gap-1.5 transition-all ${consolePane && visiblePanes[consolePane] ? "bg-[#f0efed] text-[#1a1a19]" : "text-[#9c9c9a] hover:text-[#6b6b69]"}`}>
             <Terminal className="h-3 w-3" />
             {logs.length > 0 ? `${logs.length}` : ""}
           </button>
-          <button onClick={() => setShowCode(!showCode)} className={`text-[11px] px-2 py-1 rounded flex items-center gap-1.5 transition-all ${showCode ? "bg-[#f0efed] text-[#1a1a19]" : "text-[#9c9c9a] hover:text-[#6b6b69]"}`}>
+          <button onClick={() => focusWidget("python")} className={`text-[11px] px-2 py-1 rounded flex items-center gap-1.5 transition-all ${pythonPane && visiblePanes[pythonPane] ? "bg-[#f0efed] text-[#1a1a19]" : "text-[#9c9c9a] hover:text-[#6b6b69]"}`}>
             <Code2 className="h-3 w-3" />
           </button>
           <div className="h-4 w-px bg-[#e2e1de]" />
@@ -477,7 +704,7 @@ export function BlocklyWorkspace({
             <div ref={hostRef} className="h-full w-full" />
           </div>
           
-          {showConsole && (
+          {visiblePanes.bottom && (
             <div 
               style={{ height: `${outputHeight}px` }} 
               className="flex-shrink-0 border-t border-[#e2e1de] bg-white flex flex-col overflow-hidden relative"
@@ -487,84 +714,22 @@ export function BlocklyWorkspace({
                 onMouseDown={startResizing}
               />
 
-              <div className="flex items-center justify-between px-4 h-9 border-b border-[#f0efed] bg-white">
-                <div className="flex items-center gap-1">
-                  <button 
-                    onClick={() => setActiveOutputTab("console")}
-                    className={`px-3 h-9 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${activeOutputTab === "console" ? "border-[#d97706] text-[#1a1a19]" : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"}`}
-                  >
-                    <Terminal className="h-3 w-3" />
-                    Console
-                  </button>
-                  <button
-                    onClick={() => setActiveOutputTab("rerun")}
-                    className={`px-3 h-9 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${activeOutputTab === "rerun" ? "border-[#d97706] text-[#1a1a19]" : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"}`}
-                  >
-                    <Box className="h-3 w-3" />
-                    Simulation
-                  </button>
-                  <button
-                    onClick={() => setActiveOutputTab("camera")}
-                    className={`px-3 h-9 text-[11px] font-medium transition-colors border-b-2 flex items-center gap-1.5 ${activeOutputTab === "camera" ? "border-[#d97706] text-[#1a1a19]" : "border-transparent text-[#9c9c9a] hover:text-[#6b6b69]"}`}
-                  >
-                    <Camera className="h-3 w-3" />
-                    Camera Feed
-                  </button>
-                </div>
-                <button 
-                  onClick={() => setShowConsole(false)}
-                  className="p-1.5 hover:bg-[#f0efed] rounded-md transition-colors"
-                >
-                  <ChevronDown className="h-3.5 w-3.5 text-[#9c9c9a]" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-hidden bg-[#fafaf9]">
-                {activeOutputTab === "console" ? (
-                  <div className="h-full p-2">
-                    <RobotConsole logs={logs} onClear={clearLogs} />
-                  </div>
-                ) : activeOutputTab === "rerun" ? (
-                  <div className="h-full p-2">
-                    <SimulationViewer url={simulationUrl} version={simVersion} className="h-full" />
-                  </div>
-                ) : (
-                  <div className="h-full p-2">
-                    <CameraFeedWidget
-                      wsUrl={connectionUrl}
-                      isRobotConnected={connectionStatus === "connected"}
-                      active={activeOutputTab === "camera" && showConsole}
-                      className="h-full"
-                    />
-                  </div>
-                )}
-              </div>
+              {renderWidgetPane({
+                paneId: "bottom",
+                className: "flex h-full flex-col overflow-hidden",
+                bodyClassName: "flex-1 overflow-hidden bg-[#fafaf9]",
+                title: "Bottom widget pane",
+              })}
             </div>
           )}
         </div>
 
-        {showCode && (
-          <div className="w-[380px] flex-shrink-0 flex flex-col bg-white border-l border-[#e2e1de]">
-            <div className="flex items-center justify-between px-3 h-9 border-b border-[#e2e1de]">
-              <div className="flex items-center gap-1.5">
-                <Code2 className="h-3.5 w-3.5 text-[#9c9c9a]" />
-                <span className="text-[11px] font-mono text-[#9c9c9a]">output.py</span>
-              </div>
-              <button onClick={handleCopy} className="text-[10px] text-[#9c9c9a] hover:text-[#6b6b69] transition-colors">{copied ? "Copied" : "Copy"}</button>
-            </div>
-            <div className="flex-1 overflow-auto bg-[#fafaf9]">
-              {generatedPython ? (
-                <SyntaxHighlighter language="python" style={githubGist} customStyle={{ background: "#fafaf9", padding: "12px", margin: 0, fontSize: "11px", lineHeight: "1.75", height: "100%", fontFamily: "var(--font-mono), monospace" }} showLineNumbers lineNumberStyle={{ color: "#d4d3d0", minWidth: "2em", fontSize: "10px" }}>
-                  {generatedPython}
-                </SyntaxHighlighter>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-[11px] text-[#d4d3d0]">Drag blocks to generate code</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {visiblePanes.right && renderWidgetPane({
+          paneId: "right",
+          className: "w-[380px] flex-shrink-0 flex flex-col bg-white border-l border-[#e2e1de]",
+          bodyClassName: "flex-1 overflow-auto bg-[#fafaf9]",
+          title: "Right widget pane",
+        })}
       </div>
 
       <ConnectDialog isOpen={connectOpen} status={connectionStatus} onConnect={connect} onDisconnect={disconnect} onClose={() => setConnectOpen(false)} />
