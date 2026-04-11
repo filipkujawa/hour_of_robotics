@@ -1,5 +1,35 @@
 import * as Blockly from "blockly";
 
+// Dynamic skills list — updated at runtime when fetched from the robot
+let _availableSkills: [string, string][] = [
+  ["arm_zero_position", "arm_zero_position"],
+  ["arm_move_to_xyz", "arm_move_to_xyz"],
+  ["arm_circle_motion", "arm_circle_motion"],
+  ["head_emotion", "head_emotion"],
+  ["open_gripper", "open_gripper"],
+  ["close_gripper", "close_gripper"],
+  ["pick_up_piece_simple", "pick_up_piece_simple"],
+  ["navigate_to_position", "navigate_to_position"],
+  ["navigate_with_vision", "navigate_with_vision"],
+  ["scan_for_objects", "scan_for_objects"],
+  ["record_position", "record_position"],
+  ["recalibrate_manual", "recalibrate_manual"],
+  ["detect_opponent_move", "detect_opponent_move"],
+  ["send_email", "send_email"],
+  ["send_picture_via_email", "send_picture_via_email"],
+  ["retrieve_emails", "retrieve_emails"],
+];
+
+export function updateAvailableSkills(skills: string[]) {
+  if (skills.length > 0) {
+    _availableSkills = skills.map((s) => [s, s]);
+  }
+}
+
+export function getAvailableSkills(): [string, string][] {
+  return _availableSkills;
+}
+
 const waitBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
   {
     type: "mars_wait",

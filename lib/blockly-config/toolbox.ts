@@ -104,6 +104,7 @@ export const toolboxConfig = {
       name: "Utilities",
       colour: "#636e72",
       contents: [
+        { kind: "block", type: "mars_run_skill" },
         { kind: "block", type: "mars_random" },
         { kind: "block", type: "mars_wait" },
         { kind: "block", type: "mars_wait_until" },

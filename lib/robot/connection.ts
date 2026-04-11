@@ -587,6 +587,33 @@ export class RobotConnection {
     });
   }
 
+  async getAvailableSkills(): Promise<string[]> {
+    if (!this.ros) return [];
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/brain/available_skills",
+        messageType: "std_msgs/String",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        topic.unsubscribe();
+        try {
+          const skills = JSON.parse(message.data);
+          resolve(Array.isArray(skills) ? skills : []);
+        } catch {
+          resolve([]);
+        }
+      };
+
+      topic.subscribe(handler);
+      setTimeout(() => { topic.unsubscribe(); resolve([]); }, 3000);
+    });
+  }
+
   // ==========================================
   // Arm (torque)
   // ==========================================

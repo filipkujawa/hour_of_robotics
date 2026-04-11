@@ -279,6 +279,19 @@ export class BlockExecutor {
         await this.robot.ledsOff();
         break;
 
+      // ---- Skills ----
+      case "mars_run_skill": {
+        const skill = String(block.fields.SKILL || "");
+        let params = {};
+        try {
+          params = JSON.parse(String(block.fields.PARAMS || "{}"));
+        } catch {
+          this.onLog("Invalid JSON params, using {}");
+        }
+        await this.robot.executeSkill(skill, params);
+        break;
+      }
+
       // ---- Console ----
       case "mars_print": {
         const value = await this.evaluateValue(block.inputs.VALUE || null);

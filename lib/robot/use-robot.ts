@@ -90,6 +90,11 @@ export function useRobot() {
     setLogs([]);
   }, []);
 
+  const fetchSkills = useCallback(async (): Promise<string[]> => {
+    if (!robotRef.current) return [];
+    return robotRef.current.getAvailableSkills();
+  }, []);
+
   const sayAndSpin = useCallback(async () => {
     if (!robotRef.current) {
       addLog("Not connected to robot", "error");
@@ -121,5 +126,6 @@ export function useRobot() {
     stopExecution,
     clearLogs,
     sayAndSpin,
+    fetchSkills,
   };
 }

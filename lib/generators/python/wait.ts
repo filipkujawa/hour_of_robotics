@@ -6,6 +6,13 @@ export function registerWaitGenerators() {
     return `mars.wait(${seconds})\n`;
   };
 
+  pythonGenerator.forBlock["mars_run_skill"] = function (block) {
+    const skill = block.getFieldValue("SKILL");
+    const params = block.getFieldValue("PARAMS");
+    const escapedSkill = skill.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    return `mars.run_skill("${escapedSkill}", ${params || "{}"})\n`;
+  };
+
   pythonGenerator.forBlock["mars_random"] = function (block) {
     const min = block.getFieldValue("MIN");
     const max = block.getFieldValue("MAX");

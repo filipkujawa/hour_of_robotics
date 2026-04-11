@@ -13,6 +13,7 @@ import { useRobot } from "@/lib/robot";
 import { registerAllBlocks } from "@/lib/blocks";
 import { registerAllGenerators } from "@/lib/generators/python";
 import { toolboxConfig } from "@/lib/blockly-config/toolbox";
+import { updateAvailableSkills } from "@/lib/blocks/wait";
 import { RobotConsole } from "./robot-console";
 import { ConnectDialog } from "./connect-dialog";
 import { MarsChat } from "./mars-chat";
@@ -62,7 +63,21 @@ export function BlocklyWorkspace({
     stopExecution,
     clearLogs,
     connectionUrl,
+    fetchSkills,
   } = useRobot();
+
+  const [loadingSkills, setLoadingSkills] = useState(false);
+
+  const handleFetchSkills = async () => {
+    if (connectionStatus !== "connected") {
+      setConnectOpen(true);
+      return;
+    }
+    setLoadingSkills(true);
+    const skills = await fetchSkills();
+    updateAvailableSkills(skills);
+    setLoadingSkills(false);
+  };
 
   const startResizing = useCallback(() => setIsResizing(true), []);
   const stopResizing = useCallback(() => setIsResizing(false), []);
@@ -416,6 +431,14 @@ export function BlocklyWorkspace({
                 )}
               </div>
               <div className="px-4 py-3 border-t border-[#e2e1de] space-y-2">
+                <button
+                  onClick={handleFetchSkills}
+                  disabled={loadingSkills}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#f0efed] hover:bg-[#e8e7e4] text-[#1a1a19] border border-[#e2e1de] rounded-md font-semibold text-[12px] transition-colors"
+                >
+                  {loadingSkills ? "Fetching skills..." : "Refresh Robot Skills"}
+                </button>
+
                 <button
                   onClick={handleOpenCameras}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#f7f4ee] hover:bg-[#f2eee6] text-[#1a1a19] border border-[#e2d8ca] rounded-md font-semibold text-[12px] transition-colors"
