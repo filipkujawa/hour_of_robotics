@@ -110,6 +110,22 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
         # Back to home-ish
         sim.animate_joints({"joint2": 0.0, "joint3": 0.0, "joint4": 0.0, "joint5": 0.0}, sim_time, duration)
         sim_time += duration
+    elif block.type == "mars_head_tilt":
+        degrees = float(block.fields.get("DEGREES", 0))
+        duration = 0.5
+        sim.animate_joints({"joint_head": degrees * 3.14159 / 180.0}, sim_time, duration)
+        sim_time += duration
+    elif block.type == "mars_head_emotion":
+        # Map emotions to head tilt angles
+        emotion_map = {
+            "happy": 10, "sad": -20, "excited": 15,
+            "thinking": -10, "neutral": 0,
+        }
+        emotion = block.fields.get("EMOTION", "neutral")
+        angle = emotion_map.get(emotion, 0)
+        duration = 0.5
+        sim.animate_joints({"joint_head": angle * 3.14159 / 180.0}, sim_time, duration)
+        sim_time += duration
     elif block.type == "mars_wait":
         seconds = float(block.fields.get("SECONDS", 1.0))
         sim_time += seconds

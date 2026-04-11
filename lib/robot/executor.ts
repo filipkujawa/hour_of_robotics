@@ -189,6 +189,18 @@ export class BlockExecutor {
         await this.robot.pickUp();
         break;
 
+      // ---- Head ----
+      case "mars_head_tilt":
+        this.robot.setHeadTilt(Number(block.fields.DEGREES) || 0);
+        await new Promise((r) => setTimeout(r, 500));
+        break;
+
+      case "mars_head_emotion":
+        await this.robot.executeSkill("head_emotion", {
+          emotion: String(block.fields.EMOTION || "neutral"),
+        });
+        break;
+
       // ---- Speech ----
       case "mars_say":
         await this.robot.say(String(block.fields.TEXT || "Hello!"));

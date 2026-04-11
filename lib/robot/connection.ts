@@ -32,6 +32,8 @@ export class RobotConnection {
   private armService: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private lightService: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private headTopic: any = null;
 
   constructor(options: RobotConnectionOptions = {}) {
     this.url = options.url || "ws://mars.local:9090";
@@ -90,6 +92,7 @@ export class RobotConnection {
     this.cmdVelTopic = null;
     this.armService = null;
     this.lightService = null;
+    this.headTopic = null;
   }
 
   private initTopicsAndServices(roslib: typeof import("roslib")) {
@@ -103,8 +106,14 @@ export class RobotConnection {
 
     this.armService = new roslib.Service({
       ros: this.ros,
-      name: "/mars/arm/goto_js",
-      serviceType: "maurice_msgs/GotoJS",
+      name: "/mars/arm/goto_js_v2",
+      serviceType: "maurice_msgs/GotoJSV2",
+    });
+
+    this.headTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/mars/head/set_position",
+      messageType: "std_msgs/Int32",
     });
 
     this.lightService = new roslib.Service({
@@ -180,12 +189,12 @@ export class RobotConnection {
 
   async armHome(): Promise<void> {
     this.onLog("Arm -> home");
-    return this.executeSkill("home_position", {});
+    return this.executeSkill("arm_zero_position", {});
   }
 
   async wave(): Promise<void> {
     this.onLog("Waving!");
-    return this.executeSkill("wave", {});
+    return this.executeSkill("head_emotion", { emotion: "excited" });
   }
 
   async gripperOpen(): Promise<void> {
@@ -200,7 +209,7 @@ export class RobotConnection {
 
   async pickUp(): Promise<void> {
     this.onLog("Picking up");
-    return this.executeSkill("pick_up", {});
+    return this.executeSkill("pick_up_piece_simple", {});
   }
 
   // ==========================================
@@ -249,6 +258,22 @@ export class RobotConnection {
   }
 
   // ==========================================
+  // Head
+  // ==========================================
+
+  setHeadTilt(degrees: number) {
+    if (!this.headTopic) {
+      this.onError("Not connected");
+      return;
+    }
+
+    // Clamp to innate-os range: -25 (down) to +15 (up)
+    const clamped = Math.max(-25, Math.min(15, degrees));
+    this.onLog(`Head tilt -> ${clamped}°`);
+    this.headTopic.publish({ data: clamped });
+  }
+
+  // ==========================================
   // Sensors
   // ==========================================
 
@@ -282,7 +307,7 @@ export class RobotConnection {
   // Generic skill execution
   // ==========================================
 
-  async executeSkill(skillName: string, inputs: Record<string, unknown>): Promise<void> {
+  async executeSkill(skillName: string, parameters: Record<string, unknown>): Promise<void> {
     if (!this.ros) {
       this.onError("Not connected");
       return;
@@ -293,15 +318,15 @@ export class RobotConnection {
     return new Promise((resolve, reject) => {
       const actionClient = new roslib.ActionClient({
         ros: this.ros,
-        serverName: "/execute_primitive",
-        actionName: "maurice_msgs/ExecutePrimitive",
+        serverName: "/execute_skill",
+        actionName: "maurice_msgs/ExecuteSkill",
       });
 
       const goal = new roslib.Goal({
         actionClient,
         goalMessage: {
-          primitive_type: skillName,
-          inputs: JSON.stringify(inputs),
+          skill_name: skillName,
+          parameters: JSON.stringify(parameters),
         },
       });
 

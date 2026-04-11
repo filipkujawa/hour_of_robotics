@@ -49,6 +49,15 @@ export const toolboxConfig = {
     },
     {
       kind: "category",
+      name: "Head",
+      colour: "#a29bfe",
+      contents: [
+        { kind: "block", type: "mars_head_tilt" },
+        { kind: "block", type: "mars_head_emotion" },
+      ],
+    },
+    {
+      kind: "category",
       name: "Lights",
       colour: "#e84393",
       contents: [

@@ -4,6 +4,7 @@ import { registerArmGenerators } from "./arm";
 import { registerSpeechGenerators } from "./speech";
 import { registerLightGenerators } from "./lights";
 import { registerWaitGenerators } from "./wait";
+import { registerHeadGenerators } from "./head";
 
 export function registerAllGenerators() {
   registerMovementGenerators();
@@ -12,4 +13,5 @@ export function registerAllGenerators() {
   registerSpeechGenerators();
   registerLightGenerators();
   registerWaitGenerators();
+  registerHeadGenerators();
 }

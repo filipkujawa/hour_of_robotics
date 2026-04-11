@@ -5,6 +5,7 @@ import armBlocks from "./arm";
 import speechBlocks from "./speech";
 import lightBlocks from "./lights";
 import waitBlocks from "./wait";
+import headBlocks from "./head";
 
 export function registerAllBlocks() {
   Blockly.common.defineBlocks(movementBlocks);
@@ -13,4 +14,5 @@ export function registerAllBlocks() {
   Blockly.common.defineBlocks(speechBlocks);
   Blockly.common.defineBlocks(lightBlocks);
   Blockly.common.defineBlocks(waitBlocks);
+  Blockly.common.defineBlocks(headBlocks);
 }
