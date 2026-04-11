@@ -1,6 +1,9 @@
 fastapi==0.111.0
 uvicorn==0.30.1
 rerun-sdk>=0.31.2
+ikpy>=3.4
+trimesh>=4.0
+python-fcl>=0.7
 pydantic==2.7.4
 python-multipart==0.0.9
 mypy==1.10.0

@@ -80,14 +80,13 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
         }, sim_time, duration)
         sim_time += duration
     elif block.type == "mars_arm_move_to":
-        # Simplified: just move joint2 and joint3 to show some movement
-        # In a real app we'd use IK here
-        z = float(block.fields.get("Z", 20))
+        # Real IK using ikpy with the actual URDF kinematic chain
+        x = float(block.fields.get("X", 0)) / 100.0  # cm to m
+        y = float(block.fields.get("Y", 0)) / 100.0
+        z = float(block.fields.get("Z", 20)) / 100.0
         duration = 1.0
-        sim.animate_joints({
-            "joint2": -0.5 if z > 15 else 0.5,
-            "joint3": 0.8 if z > 15 else -0.2
-        }, sim_time, duration)
+        joints = sim.solve_ik(x, y, z)
+        sim.animate_joints(joints, sim_time, duration)
         sim_time += duration
     elif block.type == "mars_gripper":
         action = block.fields.get("ACTION", "OPEN")
@@ -126,6 +125,52 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
         duration = 0.5
         sim.animate_joints({"joint_head": angle * 3.14159 / 180.0}, sim_time, duration)
         sim_time += duration
+    elif block.type == "mars_joint_position":
+        joint_num = int(block.fields.get("JOINT", 1))
+        angle_deg = float(block.fields.get("ANGLE", 0))
+        radians = angle_deg * 3.14159 / 180.0
+        joint_name = f"joint{joint_num}"
+        duration = 0.8
+        sim.animate_joints({joint_name: radians}, sim_time, duration)
+        sim_time += duration
+    elif block.type == "mars_all_joints":
+        duration = 1.0
+        joints = {}
+        for i in range(1, 7):
+            deg = float(block.fields.get(f"J{i}", 0))
+            joints[f"joint{i}"] = deg * 3.14159 / 180.0
+        sim.animate_joints(joints, sim_time, duration)
+        sim_time += duration
+    elif block.type == "mars_say_advanced":
+        text = str(block.fields.get("TEXT", "Hello!"))
+        sim_time += 0.5
+        sim.say(text, sim_time)
+    elif block.type == "mars_spin":
+        degrees = float(block.fields.get("DEGREES", 180))
+        duration = abs(degrees) / 180.0
+        direction = "LEFT" if degrees >= 0 else "RIGHT"
+        sim.turn(direction, abs(degrees), sim_time, duration)
+        sim_time += duration
+    elif block.type == "mars_navigate_to":
+        # Simplified: just move to the target position
+        import math as _math
+        target_x = float(block.fields.get("X", 0))
+        target_y = float(block.fields.get("Y", 0))
+        dx = target_x - sim.pos_x
+        dy = target_y - sim.pos_y
+        dist = _math.sqrt(dx*dx + dy*dy)
+        if dist > 0.01:
+            # Turn to face target
+            target_heading = _math.atan2(dy, dx)
+            turn_deg = _math.degrees(target_heading - sim.heading)
+            if abs(turn_deg) > 1:
+                direction = "LEFT" if turn_deg > 0 else "RIGHT"
+                sim.turn(direction, abs(turn_deg), sim_time, 0.5)
+                sim_time += 0.5
+            # Move forward
+            steps = dist / 0.25
+            sim.move_forward(steps, sim_time, max(1.0, dist * 2))
+            sim_time += max(1.0, dist * 2)
     elif block.type == "mars_wait":
         seconds = float(block.fields.get("SECONDS", 1.0))
         sim_time += seconds

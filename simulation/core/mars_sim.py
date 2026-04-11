@@ -6,7 +6,10 @@ import time
 import os
 import socket
 import math
+import numpy as np
+import ikpy.chain
 from typing import Optional
+from simulation.core.collision import CollisionChecker
 
 def find_free_port():
     """Finds a free port on the local machine."""
@@ -49,7 +52,19 @@ class MarsSimulator:
         
         # Initialize URDF tree
         self.urdf_tree = UrdfTree.from_file_path(self.urdf_path, entity_path_prefix="robot", frame_prefix="tf#robot/")
-        
+
+        # IK chain from the same URDF (base_link → ee_link)
+        self.ik_chain = ikpy.chain.Chain.from_urdf_file(
+            self.urdf_path,
+            base_elements=["base_link"],
+            last_link_vector=[0.091838, 0, 0],
+            active_links_mask=[False, True, True, True, True, True, True, False],
+            name="arm"
+        )
+
+        # Collision checker using FCL with actual STL meshes (same as MoveIt2)
+        self.collision = CollisionChecker(self.urdf_path)
+
         # Track joint positions
         self.current_joints = {j.name: 0.0 for j in self.urdf_tree.joints()}
 
@@ -76,23 +91,95 @@ class MarsSimulator:
                 entity_path = self.get_entity_path_for_link(joint.child_link)
                 self.rec.log(entity_path, transform)
 
+    def solve_ik(self, x: float, y: float, z: float) -> dict[str, float]:
+        """Solve IK for a target XYZ position (meters).
+
+        Tries multiple seeds and picks the collision-free solution
+        closest to the current joint configuration (minimal joint movement),
+        matching how MoveIt2 selects IK solutions.
+        """
+        target = [x, y, z]
+
+        # Build current config for the chain (8 elements: base + 6 joints + ee)
+        current = [0.0] * 8
+        for i, jname in enumerate(["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]):
+            current[i + 1] = self.current_joints.get(jname, 0.0)
+
+        # Compute the geometrically correct base rotation for j1
+        # This is what the real robot does — point the arm toward the target
+        j1_hint = math.atan2(y, x) if abs(x) > 0.001 or abs(y) > 0.001 else current[1]
+
+        # Try multiple seeds: current config, j1-hinted, and perturbations
+        seeds = [current]
+
+        # Seed with correct j1 rotation
+        hinted = list(current)
+        hinted[1] = j1_hint
+        seeds.append(hinted)
+
+        # Perturbations on j2 (shoulder) and j3 (elbow)
+        for j2_off in [0.0, -0.3, 0.3, -0.6, 0.6]:
+            for j3_off in [0.0, 0.3, -0.3, 0.6]:
+                seed = list(current)
+                seed[1] = j1_hint
+                seed[2] = current[2] + j2_off
+                seed[3] = current[3] + j3_off
+                seeds.append(seed)
+
+        # Solve IK with each seed, collect valid solutions
+        candidates = []
+        current_arr = np.array(current[1:7])
+
+        for seed in seeds:
+            try:
+                ik_result = self.ik_chain.inverse_kinematics(target, initial_position=seed)
+                joints = {f"joint{i+1}": float(ik_result[i+1]) for i in range(6)}
+
+                # Skip if in collision
+                if self.collision.check_collision(joints):
+                    continue
+
+                # Score: distance from current config (prefer minimal movement)
+                result_arr = np.array([joints[f"joint{i+1}"] for i in range(6)])
+                dist = float(np.linalg.norm(result_arr - current_arr))
+                candidates.append((dist, joints))
+            except Exception:
+                continue
+
+        if candidates:
+            # Pick the solution closest to current config
+            candidates.sort(key=lambda x: x[0])
+            return candidates[0][1]
+
+        # Fallback: use the first seed result even if it collides
+        ik_result = self.ik_chain.inverse_kinematics(target, initial_position=seeds[0])
+        return {f"joint{i+1}": float(ik_result[i+1]) for i in range(6)}
+
     def animate_joints(self, target_joints: dict[str, float], start_time: float, duration: float = 1.0):
-        """Interpolates joints from current to target over duration."""
-        start_joints = self.current_joints.copy()
+        """Interpolates joints from current to target over duration, avoiding collisions."""
+        start_joints = {k: v for k, v in self.current_joints.items()}
+
+        # Plan a collision-free trajectory using FCL
+        trajectory = self.collision.plan_collision_free(
+            start_joints, target_joints, num_waypoints=20
+        )
+
         fps = 30
         num_steps = max(1, int(duration * fps))
-        
+
         for i in range(1, num_steps + 1):
             t = i / num_steps
-            # Use smoothstep for more natural movement
             smooth_t = t * t * (3 - 2 * t)
             curr_time = start_time + t * duration
             self.rec.set_time("sim_time", duration=curr_time)
-            
+
+            # Map the smooth_t to a waypoint in the trajectory
+            traj_idx = min(int(smooth_t * (len(trajectory) - 1)), len(trajectory) - 1)
+            waypoint = trajectory[traj_idx]
+
             for name, target_val in target_joints.items():
-                start_val = start_joints.get(name, 0.0)
-                interp_val = start_val + (target_val - start_val) * smooth_t
-                self.set_joint_position(name, interp_val, log=True)
+                val = waypoint.get(name, start_joints.get(name, 0.0))
+                self.set_joint_position(name, val, log=True)
 
     def setup_robot_model(self):
         """Initializes the robot model and blueprint."""
