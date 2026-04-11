@@ -65,7 +65,9 @@ export function BlocklyWorkspace({
   const [simulationUrl, setSimulationUrl] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [outputHeight, setOutputHeight] = useState(240);
-  const [isResizing, setIsResizing] = useState(false);
+  const [rightPaneWidth, setRightPaneWidth] = useState(380);
+  const [isResizingBottom, setIsResizingBottom] = useState(false);
+  const [isResizingRight, setIsResizingRight] = useState(false);
   const [widgetsByPane, setWidgetsByPane] = useState<Record<PaneId, WidgetId[]>>(DEFAULT_WIDGET_LAYOUT);
   const [activeWidgetByPane, setActiveWidgetByPane] = useState<Record<PaneId, WidgetId | null>>(DEFAULT_ACTIVE_WIDGET);
   const [visiblePanes, setVisiblePanes] = useState<Record<PaneId, boolean>>({ bottom: true, right: true });
@@ -97,16 +99,26 @@ export function BlocklyWorkspace({
     setLoadingSkills(false);
   };
 
-  const startResizing = useCallback(() => setIsResizing(true), []);
-  const stopResizing = useCallback(() => setIsResizing(false), []);
+  const startBottomResizing = useCallback(() => setIsResizingBottom(true), []);
+  const startRightResizing = useCallback(() => setIsResizingRight(true), []);
+  const stopResizing = useCallback(() => {
+    setIsResizingBottom(false);
+    setIsResizingRight(false);
+  }, []);
   const resize = useCallback((e: MouseEvent) => {
-    if (isResizing) {
+    if (isResizingBottom) {
       const newHeight = window.innerHeight - e.clientY;
       if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
         setOutputHeight(newHeight);
       }
     }
-  }, [isResizing]);
+    if (isResizingRight) {
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth > 260 && newWidth < window.innerWidth * 0.65) {
+        setRightPaneWidth(newWidth);
+      }
+    }
+  }, [isResizingBottom, isResizingRight]);
 
   useEffect(() => {
     window.addEventListener("mousemove", resize);
@@ -116,6 +128,12 @@ export function BlocklyWorkspace({
       window.removeEventListener("mouseup", stopResizing);
     };
   }, [resize, stopResizing]);
+
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+    Blockly.svgResize(workspace);
+  }, [outputHeight, rightPaneWidth, visiblePanes.bottom, visiblePanes.right]);
 
   const findWidgetPane = useCallback(
     (widgetId: WidgetId) =>
@@ -711,7 +729,7 @@ export function BlocklyWorkspace({
             >
               <div 
                 className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-[#d97706]/30 transition-colors z-20"
-                onMouseDown={startResizing}
+                onMouseDown={startBottomResizing}
               />
 
               {renderWidgetPane({
@@ -724,12 +742,23 @@ export function BlocklyWorkspace({
           )}
         </div>
 
-        {visiblePanes.right && renderWidgetPane({
-          paneId: "right",
-          className: "w-[380px] flex-shrink-0 flex flex-col bg-white border-l border-[#e2e1de]",
-          bodyClassName: "flex-1 overflow-auto bg-[#fafaf9]",
-          title: "Right widget pane",
-        })}
+        {visiblePanes.right && (
+          <div
+            style={{ width: `${rightPaneWidth}px` }}
+            className="relative flex-shrink-0"
+          >
+            <div
+              className="absolute bottom-0 left-0 top-0 w-1 cursor-ew-resize hover:bg-[#d97706]/30 transition-colors z-20"
+              onMouseDown={startRightResizing}
+            />
+            {renderWidgetPane({
+              paneId: "right",
+              className: "h-full flex flex-col bg-white border-l border-[#e2e1de]",
+              bodyClassName: "flex-1 overflow-auto bg-[#fafaf9]",
+              title: "Right widget pane",
+            })}
+          </div>
+        )}
       </div>
 
       <ConnectDialog isOpen={connectOpen} status={connectionStatus} onConnect={connect} onDisconnect={disconnect} onClose={() => setConnectOpen(false)} />
