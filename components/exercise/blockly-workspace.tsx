@@ -284,6 +284,56 @@ export function BlocklyWorkspace({
       renderer: "zelos",
     });
 
+    // Inject toolbox style overrides AFTER Blockly so they win over Blockly's injected CSS
+    if (!document.getElementById("blockly-toolbox-overrides")) {
+      const style = document.createElement("style");
+      style.id = "blockly-toolbox-overrides";
+      style.textContent = `
+        .blocklyToolboxCategory {
+          height: auto !important;
+          padding: 7px 10px 7px 12px !important;
+          margin: 1px 6px !important;
+          border-radius: 6px !important;
+          line-height: 1.2 !important;
+          transition: background-color 0.1s ease !important;
+          border-left-width: 3px !important;
+          border-left-style: solid !important;
+          border-top: none !important;
+          border-right: none !important;
+          border-bottom: none !important;
+        }
+        .blocklyToolboxCategory:not(.blocklyToolboxSelected):hover {
+          background-color: #f0efed !important;
+        }
+        .blocklyToolboxSelected {
+          background-color: #eeeeec !important;
+        }
+        .blocklyToolboxCategoryIcon {
+          display: none !important;
+        }
+        .blocklyToolboxCategoryLabel {
+          font-size: 13px !important;
+          font-weight: 500 !important;
+          font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
+          color: #6b6b69 !important;
+          cursor: pointer !important;
+          padding: 0 !important;
+        }
+        .blocklyToolboxCategory:hover .blocklyToolboxCategoryLabel {
+          color: #1a1a19 !important;
+        }
+        .blocklyToolboxSelected .blocklyToolboxCategoryLabel {
+          color: #1a1a19 !important;
+          font-weight: 600 !important;
+        }
+        .blocklyTreeSeparator {
+          border-bottom: 1px solid #e8e6e2 !important;
+          margin: 6px 14px !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     workspaceRef.current = workspace;
     workspace.addChangeListener(handleWorkspaceChange);
 

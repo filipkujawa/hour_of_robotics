@@ -90,65 +90,14 @@ body {
 .blocklyToolboxDiv {
   background-color: #fafaf9 !important;
   border-right: 1px solid #e2e1de !important;
-  padding: 6px 0 !important;
-  width: 150px !important;
+  padding: 8px 0 !important;
+  width: 160px !important;
   z-index: 40 !important;
+  overflow: hidden !important;
 }
 
-.blocklyTreeRow {
-  height: auto !important;
-  padding: 6px 10px 6px 12px !important;
-  margin: 0 4px !important;
-  border-radius: 5px !important;
-  line-height: 1 !important;
-  transition: background-color 0.08s ease !important;
-  background-color: transparent !important;
-  border: none !important;
-}
-
-.blocklyTreeRow:not(.blocklyTreeSelected):hover {
-  background-color: #f0efed !important;
-}
-
-.blocklyTreeSelected {
-  background-color: #eeeeec !important;
-}
-
-.blocklyTreeLabel {
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  font-family: var(--font-dm-sans), -apple-system, sans-serif !important;
-  color: #6b6b69 !important;
-}
-
-.blocklyTreeRow:hover .blocklyTreeLabel {
-  color: #1a1a19 !important;
-}
-
-.blocklyTreeSelected .blocklyTreeLabel {
-  color: #1a1a19 !important;
-  font-weight: 600 !important;
-}
-
-.blocklyTreeIcon,
-.blocklyTreeIconOpen,
-.blocklyTreeIconClosed,
-.blocklyTreeIconNone {
-  display: none !important;
-}
-
-.blocklyTreeRowContentContainer {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.blocklyToolboxDiv .blocklyTreeSeparator {
-  height: 1px !important;
-  margin: 4px 10px !important;
-  background-color: #e2e1de !important;
-  border: none !important;
-}
+/* Toolbox category overrides are injected at runtime in blockly-workspace.tsx
+   after Blockly's own CSS, so they actually take effect. */
 
 /* ── Blockly Flyout ── */
 
