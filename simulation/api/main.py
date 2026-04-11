@@ -129,8 +129,25 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
     elif block.type == "mars_wait":
         seconds = float(block.fields.get("SECONDS", 1.0))
         sim_time += seconds
-        # No action needed, just advance time
-        
+
+    # ---- Loops ----
+    elif block.type == "controls_repeat_ext":
+        times_block = block.inputs.get("TIMES")
+        times = int(float(times_block.get("fields", {}).get("NUM", 1))) if times_block else 1
+        body_raw = block.inputs.get("DO")
+        if body_raw:
+            body = BlockData(**body_raw) if isinstance(body_raw, dict) else body_raw
+            for _ in range(min(times, 50)):
+                sim_time = process_block_chain(sim, body, sim_time)
+
+    elif block.type == "mars_repeat":
+        count = int(float(block.fields.get("COUNT", 2)))
+        body_raw = block.inputs.get("DO")
+        if body_raw:
+            body = BlockData(**body_raw) if isinstance(body_raw, dict) else body_raw
+            for _ in range(min(count, 50)):
+                sim_time = process_block_chain(sim, body, sim_time)
+
     # Process the next block in the chain
     return process_block_chain(sim, block.next, sim_time)
 
