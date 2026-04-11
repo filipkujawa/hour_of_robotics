@@ -6,7 +6,7 @@ import { pythonGenerator } from "blockly/python";
 import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box } from "lucide-react";
+import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box, Download, Upload, Save } from "lucide-react";
 
 import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
@@ -236,6 +236,75 @@ export function BlocklyWorkspace({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Auto-save to localStorage on every workspace change
+  const storageKey = `mars_blocks_${exercise.title}`;
+
+  const saveToLocalStorage = useCallback(() => {
+    if (!workspaceRef.current) return;
+    const xml = Blockly.Xml.workspaceToDom(workspaceRef.current);
+    const xmlText = Blockly.Xml.domToText(xml);
+    localStorage.setItem(storageKey, xmlText);
+  }, [storageKey]);
+
+  // Hook into workspace changes to auto-save
+  useEffect(() => {
+    const ws = workspaceRef.current;
+    if (!ws) return;
+    const listener = () => saveToLocalStorage();
+    ws.addChangeListener(listener);
+    return () => ws.removeChangeListener(listener);
+  }, [saveToLocalStorage]);
+
+  // Load from localStorage on mount (after workspace is ready)
+  useEffect(() => {
+    const ws = workspaceRef.current;
+    if (!ws) return;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        ws.clear();
+        Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(saved), ws);
+      } catch {
+        // corrupt save — ignore
+      }
+    }
+  }, [storageKey]);
+
+  const handleExport = () => {
+    if (!workspaceRef.current) return;
+    const xml = Blockly.Xml.workspaceToDom(workspaceRef.current);
+    const xmlText = Blockly.Xml.domToPrettyText(xml);
+    const blob = new Blob([xmlText], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mars-blocks-${exercise.title.replace(/\s+/g, "-").toLowerCase()}.xml`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xml";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file || !workspaceRef.current) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const xml = Blockly.utils.xml.textToDom(reader.result as string);
+          workspaceRef.current!.clear();
+          Blockly.Xml.domToWorkspace(xml, workspaceRef.current!);
+        } catch {
+          alert("Invalid block file");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
   return (
     <div className="h-screen w-screen fixed inset-0 z-50 flex flex-col bg-[#f5f5f4] text-[#1a1a19] overflow-hidden">
       {/* ── Top Bar ── */}
@@ -266,6 +335,13 @@ export function BlocklyWorkspace({
             <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === "connected" ? "bg-green-600" : connectionStatus === "connecting" ? "bg-amber-500 animate-pulse" : connectionStatus === "error" ? "bg-red-500" : "bg-[#d4d3d0]"}`} />
             <Wifi className="h-3 w-3 text-[#9c9c9a]" />
             <span className="text-[11px] text-[#9c9c9a]">{connectionStatus === "connected" ? "Connected" : connectionStatus === "connecting" ? "Connecting" : "Offline"}</span>
+          </button>
+          <div className="h-4 w-px bg-[#e2e1de]" />
+          <button onClick={handleExport} className="text-[#9c9c9a] hover:text-[#6b6b69] p-1 rounded transition-colors" title="Export blocks">
+            <Download className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={handleImport} className="text-[#9c9c9a] hover:text-[#6b6b69] p-1 rounded transition-colors" title="Import blocks">
+            <Upload className="h-3.5 w-3.5" />
           </button>
           <div className="h-4 w-px bg-[#e2e1de]" />
           <button onClick={() => setShowConsole(!showConsole)} className={`text-[11px] px-2 py-1 rounded flex items-center gap-1.5 transition-all ${showConsole ? "bg-[#f0efed] text-[#1a1a19]" : "text-[#9c9c9a] hover:text-[#6b6b69]"}`}>
