@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Wifi, WifiOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ConnectionStatus } from "@/lib/robot";
+import { DEFAULT_ROBOT_URL } from "@/lib/robot/constants";
 
 export function ConnectDialog({
   isOpen,
@@ -18,7 +19,7 @@ export function ConnectDialog({
   onDisconnect: () => void;
   onClose: () => void;
 }) {
-  const [url, setUrl] = useState("ws://mars.local:9090");
+  const [url, setUrl] = useState(DEFAULT_ROBOT_URL);
 
   if (!isOpen) return null;
 
@@ -55,7 +56,7 @@ export function ConnectDialog({
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="ws://mars.local:9090"
+              placeholder={DEFAULT_ROBOT_URL}
               className="w-full rounded-xl border border-[#e1d9cc] bg-[#fbfaf7] px-3 py-2 font-mono text-sm text-[#23180d] placeholder-[#c4b9a8] transition focus:border-[#d97706] focus:outline-none focus:ring-2 focus:ring-[#d97706]/10"
             />
           </div>

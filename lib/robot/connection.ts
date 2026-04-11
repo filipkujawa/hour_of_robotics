@@ -1,3 +1,5 @@
+import { DEFAULT_ROBOT_URL } from "./constants";
+
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
 export interface RobotConnectionOptions {
@@ -47,7 +49,7 @@ export class RobotConnection {
   private lastArmJoints: number[] | null = null;
 
   constructor(options: RobotConnectionOptions = {}) {
-    this.url = options.url || "ws://mars.local:9090";
+    this.url = options.url || DEFAULT_ROBOT_URL;
     this.onStatusChange = options.onStatusChange || (() => {});
     this.onError = options.onError || (() => {});
     this.onLog = options.onLog || (() => {});

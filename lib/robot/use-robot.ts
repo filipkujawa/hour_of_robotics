@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { RobotConnection, ConnectionStatus } from "./connection";
 import { BlockExecutor } from "./executor";
+import { DEFAULT_ROBOT_URL } from "./constants";
 
 export interface LogEntry {
   id: number;
@@ -15,7 +16,7 @@ export function useRobot() {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [connectionUrl, setConnectionUrl] = useState("ws://mars.local:9090");
+  const [connectionUrl, setConnectionUrl] = useState(DEFAULT_ROBOT_URL);
 
   const robotRef = useRef<RobotConnection | null>(null);
   const executorRef = useRef<BlockExecutor | null>(null);
@@ -29,7 +30,7 @@ export function useRobot() {
   }, []);
 
   const connect = useCallback(async (url?: string) => {
-    const resolvedUrl = url || "ws://mars.local:9090";
+    const resolvedUrl = url || DEFAULT_ROBOT_URL;
     if (robotRef.current) {
       robotRef.current.disconnect();
     }
