@@ -92,7 +92,7 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
     elif block.type == "mars_gripper":
         action = block.fields.get("ACTION", "OPEN")
         duration = 0.5
-        val = -0.5 if action == "OPEN" else 0.3
+        val = 0.3 if action == "OPEN" else -0.5
         sim.animate_joints({"joint6": val}, sim_time, duration)
         sim_time += duration
     elif block.type == "mars_wave":
@@ -137,23 +137,27 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
 @app.post("/simulate", response_model=SimulationResponse)
 async def start_simulation(request: SimulationRequest):
     sid = request.session_id or str(uuid.uuid4())
-    
-    if sid not in sessions:
-        sessions[sid] = MarsSimulator(sid)
-        sessions[sid].setup_robot_model()
-    
-    sim = sessions[sid]
-    sim.reset_state()
-    
+
+    # Always create a fresh simulator so old recording data doesn't persist
+    if sid in sessions:
+        try:
+            sessions[sid].rec.disconnect()
+        except Exception:
+            pass
+
+    sim = MarsSimulator(sid)
+    sim.setup_robot_model()
+    sessions[sid] = sim
+
     sim_time = 0.0
     for block in request.blocks:
         sim_time = process_block_chain(sim, block, sim_time)
-    
+
     # Add a 2-second buffer at the end of the simulation timeline
     # This prevents the Rerun viewer from immediately looping back to the start.
     sim.rec.set_time("sim_time", duration=sim_time + 2.0)
     sim.log_current_state()
-    
+
     sim.rec.flush()
     return SimulationResponse(session_id=sid, rerun_url=sim.get_viewer_url())
 

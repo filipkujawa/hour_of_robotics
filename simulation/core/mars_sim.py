@@ -36,8 +36,9 @@ class MarsSimulator:
         self.pos_y = 0.0
         self.heading = 0.0 # radians
         
-        # Trail of points to show movement
+        # Trail: line segments + waypoint dots
         self.trail_positions = []
+        self.waypoints = []
         
         # Get path to URDF model
         self.urdf_path = os.path.join(
@@ -95,20 +96,26 @@ class MarsSimulator:
 
     def setup_robot_model(self):
         """Initializes the robot model and blueprint."""
-        # Define a clean layout
+        # Clean, minimal layout for educational use
         blueprint = rrb.Blueprint(
             rrb.Spatial3DView(
-                origin="/", 
+                origin="/",
                 name="Mars Simulation",
-                # Explicitly set target frame to root using "tf#/"
+                background=[24, 24, 27],
                 spatial_information=rrb.SpatialInformation(
                     target_frame="tf#/"
-                )
+                ),
+                line_grid=rrb.LineGrid3D(
+                    visible=True,
+                    spacing=0.15,
+                    color=[255, 255, 255, 25],
+                    stroke_width=0.5,
+                ),
             ),
             rrb.TimePanel(
-                timeline="sim_time", 
-                play_state="playing", 
-                state="expanded",
+                timeline="sim_time",
+                play_state="playing",
+                state="collapsed",
                 loop_mode="All"
             ),
             collapse_panels=True,
@@ -130,9 +137,14 @@ class MarsSimulator:
         self.pos_y = 0.0
         self.heading = 0.0
         self.trail_positions = [[0.0, 0.0, 0.0]]
-        
+        self.waypoints = [[0.0, 0.0, 0.0]]
+
         self.rec.set_time("sim_time", duration=0)
         self.log_current_state()
+
+    def add_waypoint(self):
+        """Mark the current position as a waypoint (shown as a dot)."""
+        self.waypoints.append([self.pos_x, self.pos_y, 0.01])
 
     def log_current_state(self):
         """Logs the robot's current position and orientation to Rerun."""
@@ -146,48 +158,65 @@ class MarsSimulator:
                 child_frame="tf#robot/base_link"
             )
         )
-        
-        # 2. Log the trail
-        self.trail_positions.append([self.pos_x, self.pos_y, 0.0])
-        self.rec.log(
-            "trail",
-            rr.Points3D(self.trail_positions, colors=[217, 119, 6], radii=0.05)
-        )
+
+        # 2. Log the trail as a thin blue line
+        self.trail_positions.append([self.pos_x, self.pos_y, 0.005])
+        if len(self.trail_positions) >= 2:
+            self.rec.log(
+                "trail/path",
+                rr.LineStrips3D(
+                    [self.trail_positions],
+                    colors=[[99, 160, 255, 160]],
+                    radii=0.006
+                )
+            )
+
+        # 3. Log waypoints as small blue dots at movement boundaries
+        if self.waypoints:
+            self.rec.log(
+                "trail/waypoints",
+                rr.Points3D(
+                    self.waypoints,
+                    colors=[99, 160, 255],
+                    radii=0.015
+                )
+            )
 
     def move_forward(self, steps: float, start_time: float, duration: float = 1.0):
         """Simulates moving forward with interpolation for smoothness."""
-        # Step size updated to 0.25m
+        self.add_waypoint()
         distance = steps * 0.25
         start_x, start_y = self.pos_x, self.pos_y
         target_x = start_x + distance * math.cos(self.heading)
         target_y = start_y + distance * math.sin(self.heading)
-        
+
         fps = 30
         num_steps = max(1, int(duration * fps))
         for i in range(1, num_steps + 1):
             t = i / num_steps
-            # Use smoothstep for more natural acceleration/deceleration
             smooth_t = t * t * (3 - 2 * t)
             self.pos_x = start_x + (target_x - start_x) * smooth_t
             self.pos_y = start_y + (target_y - start_y) * smooth_t
             self.rec.set_time("sim_time", duration=start_time + t * duration)
             self.log_current_state()
+        self.add_waypoint()
 
     def turn(self, direction: str, degrees: float, start_time: float, duration: float = 0.5):
         """Simulates turning with interpolation for smoothness."""
+        self.add_waypoint()
         start_heading = self.heading
         rads = math.radians(degrees)
         target_heading = start_heading + (rads if direction == "LEFT" else -rads)
-        
+
         fps = 30
         num_steps = max(1, int(duration * fps))
         for i in range(1, num_steps + 1):
             t = i / num_steps
-            # Use smoothstep for more natural rotation
             smooth_t = t * t * (3 - 2 * t)
             self.heading = start_heading + (target_heading - start_heading) * smooth_t
             self.rec.set_time("sim_time", duration=start_time + t * duration)
             self.log_current_state()
+        self.add_waypoint()
 
     def say(self, text: str, timestamp: float):
         """Simulates speaking."""

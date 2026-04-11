@@ -4,6 +4,27 @@
   <material name="matt_black">
     <color rgba="0.05 0.05 0.05 1.0"/>
   </material>
+  <material name="base_grey">
+    <color rgba="0.35 0.38 0.42 1.0"/>
+  </material>
+  <material name="arm_blue">
+    <color rgba="0.30 0.50 0.85 1.0"/>
+  </material>
+  <material name="arm_light">
+    <color rgba="0.45 0.65 0.95 1.0"/>
+  </material>
+  <material name="wrist_teal">
+    <color rgba="0.25 0.75 0.75 1.0"/>
+  </material>
+  <material name="gripper_orange">
+    <color rgba="0.90 0.55 0.20 1.0"/>
+  </material>
+  <material name="head_white">
+    <color rgba="0.88 0.90 0.92 1.0"/>
+  </material>
+  <material name="camera_red">
+    <color rgba="0.85 0.25 0.25 1.0"/>
+  </material>
 
   <!-- base_link is the root of the URDF tree -->
   <!-- The odom -> base_link transform is published by bringup.py -->
@@ -18,7 +39,7 @@
       <geometry>
         <mesh filename="meshes/base.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="base_grey"/>
     </visual>
   </link>
 
@@ -42,7 +63,7 @@
       <geometry>
         <mesh filename="meshes/link1.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="arm_blue"/>
     </visual>
   </link>
 
@@ -66,7 +87,7 @@
       <geometry>
         <mesh filename="meshes/link2.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="arm_blue"/>
     </visual>
   </link>
 
@@ -90,7 +111,7 @@
       <geometry>
         <mesh filename="meshes/link3.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="arm_light"/>
     </visual>
   </link>
 
@@ -114,7 +135,7 @@
       <geometry>
         <mesh filename="meshes/link4.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="arm_light"/>
     </visual>
   </link>
 
@@ -138,7 +159,7 @@
       <geometry>
         <mesh filename="meshes/link5.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="wrist_teal"/>
     </visual>
   </link>
 
@@ -162,7 +183,7 @@
       <geometry>
         <mesh filename="meshes/link61.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="gripper_orange"/>
     </visual>
   </link>
 
@@ -187,7 +208,7 @@
       <geometry>
         <mesh filename="meshes/link62.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="gripper_orange"/>
     </visual>
   </link>
 
@@ -208,7 +229,7 @@
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="wrist_teal"/>
     </visual>
   </link>
 
@@ -247,7 +268,7 @@
       <geometry>
         <mesh filename="meshes/head.STL" scale="1 1 1"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="head_white"/>
     </visual>
   </link>
 
@@ -268,7 +289,7 @@
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="camera_red"/>
     </visual>
   </link>
 
@@ -298,7 +319,7 @@
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
-      <material name="matt_black"/>
+      <material name="camera_red"/>
     </visual>
   </link>
 <joint name="fixed_right_camera_optical_frame" type="fixed">
