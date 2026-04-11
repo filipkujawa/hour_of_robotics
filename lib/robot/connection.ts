@@ -42,6 +42,9 @@ export class RobotConnection {
   private armTorqueOffService: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private armTorqueOnService: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private armStateTopic: any = null;
+  private lastArmJoints: number[] | null = null;
 
   constructor(options: RobotConnectionOptions = {}) {
     this.url = options.url || "ws://mars.local:9090";
@@ -105,6 +108,8 @@ export class RobotConnection {
     this.chatInTopic = null;
     this.armTorqueOffService = null;
     this.armTorqueOnService = null;
+    this.armStateTopic = null;
+    this.lastArmJoints = null;
   }
 
   private initTopicsAndServices(roslib: typeof import("roslib")) {
@@ -120,6 +125,18 @@ export class RobotConnection {
       ros: this.ros,
       name: "/mars/arm/goto_js",
       serviceType: "maurice_msgs/GotoJS",
+    });
+
+    this.armStateTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/mars/arm/state",
+      messageType: "sensor_msgs/JointState",
+    });
+
+    this.armStateTopic.subscribe((message: { position?: number[] }) => {
+      if (Array.isArray(message?.position)) {
+        this.lastArmJoints = message.position.slice(0, 6);
+      }
     });
 
     this.headTopic = new roslib.Topic({
@@ -211,7 +228,7 @@ export class RobotConnection {
   // Arm & Gripper
   // ==========================================
 
-  async armGoToJoints(joints: number[]): Promise<void> {
+  async armGoToJoints(joints: number[], durationSeconds = 2.0): Promise<void> {
     if (!this.armService) return;
 
     const jointTargets = joints.length > 6 ? joints.slice(0, 6) : joints;
@@ -222,7 +239,7 @@ export class RobotConnection {
 
     return new Promise((resolve, reject) => {
       this.armService.callService(
-        { data: { data: jointTargets }, time: 2.0 },
+        { data: { data: jointTargets }, time: durationSeconds },
         () => { this.onLog("Arm moved"); resolve(); },
         (err: string) => { this.onError(`Arm error: ${err}`); reject(new Error(err)); }
       );
@@ -231,7 +248,17 @@ export class RobotConnection {
 
   async armHome(): Promise<void> {
     this.onLog("Arm -> home");
-    return this.executeSkill("innate-os/arm_zero_position", { duration: 2000 });
+    return this.armGoToJoints(
+      [
+        1.5876701154616386,
+        -1.5968740001889525,
+        1.6152817696435802,
+        0.8927768185494431,
+        -0.035281558121369745,
+        0.010737865515199488,
+      ],
+      2.0
+    );
   }
 
   async wave(): Promise<void> {
@@ -241,12 +268,24 @@ export class RobotConnection {
 
   async gripperOpen(): Promise<void> {
     this.onLog("Gripper open");
-    return this.executeSkill("open_gripper", {});
+    if (!this.lastArmJoints) {
+      this.onError("No arm state yet; cannot open gripper");
+      return;
+    }
+    const joints = [...this.lastArmJoints];
+    joints[5] = 0.85; // GRIPPER_OPEN from manipulation_interface
+    return this.armGoToJoints(joints, 0.5);
   }
 
   async gripperClose(): Promise<void> {
     this.onLog("Gripper close");
-    return this.executeSkill("close_gripper", {});
+    if (!this.lastArmJoints) {
+      this.onError("No arm state yet; cannot close gripper");
+      return;
+    }
+    const joints = [...this.lastArmJoints];
+    joints[5] = 0.0; // GRIPPER_CLOSED from manipulation_interface
+    return this.armGoToJoints(joints, 0.5);
   }
 
   async pickUp(): Promise<void> {
