@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronLeft, Loader2, MessageCircle, Terminal, Wifi, WifiOff } from "lucide-react";
 
 import type { MarsConnectExercise } from "@/lib/course-data";
+import { DEFAULT_ROBOT_URL } from "@/lib/robot/constants";
 import { useRobot } from "@/lib/robot";
 import { MarsChat } from "./mars-chat";
 import { ConnectDialog } from "./connect-dialog";
@@ -159,7 +160,7 @@ export function MarsConnectExerciseView({
                   </div>
                 </div>
                 <p className="mt-3 text-[12px] leading-relaxed text-[#6b6b69]">
-                  Default URL: <span className="font-mono text-[#1a1a19]">ws://mars.local:9090</span>
+                  Default URL: <span className="font-mono text-[#1a1a19]">{DEFAULT_ROBOT_URL}</span>
                 </p>
                 <button onClick={() => setConnectOpen(true)} className="mt-4 rounded-md border border-[#e2e1de] px-3 py-2 text-[12px] font-medium text-[#6b6b69] transition-colors hover:bg-[#fafaf9]">
                   Open connection dialog
