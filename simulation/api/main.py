@@ -72,6 +72,44 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
         text = str(block.fields.get("TEXT", "Hello!"))
         sim_time += 0.5
         sim.say(text, sim_time)
+    elif block.type == "mars_arm_home":
+        duration = 1.0
+        sim.animate_joints({
+            "joint1": 0.0, "joint2": 0.0, "joint3": 0.0,
+            "joint4": 0.0, "joint5": 0.0, "joint6": 0.0, "joint_head": 0.0
+        }, sim_time, duration)
+        sim_time += duration
+    elif block.type == "mars_arm_move_to":
+        # Simplified: just move joint2 and joint3 to show some movement
+        # In a real app we'd use IK here
+        z = float(block.fields.get("Z", 20))
+        duration = 1.0
+        sim.animate_joints({
+            "joint2": -0.5 if z > 15 else 0.5,
+            "joint3": 0.8 if z > 15 else -0.2
+        }, sim_time, duration)
+        sim_time += duration
+    elif block.type == "mars_gripper":
+        action = block.fields.get("ACTION", "OPEN")
+        duration = 0.5
+        val = -0.5 if action == "OPEN" else 0.3
+        sim.animate_joints({"joint6": val}, sim_time, duration)
+        sim_time += duration
+    elif block.type == "mars_wave":
+        # Wave animation
+        duration = 0.5
+        # Lift arm
+        sim.animate_joints({"joint2": -0.8, "joint3": 1.2, "joint4": 0.5}, sim_time, duration)
+        sim_time += duration
+        # Wave back and forth
+        for _ in range(2):
+            sim.animate_joints({"joint5": 0.5}, sim_time, 0.25)
+            sim_time += 0.25
+            sim.animate_joints({"joint5": -0.5}, sim_time, 0.25)
+            sim_time += 0.25
+        # Back to home-ish
+        sim.animate_joints({"joint2": 0.0, "joint3": 0.0, "joint4": 0.0, "joint5": 0.0}, sim_time, duration)
+        sim_time += duration
     elif block.type == "mars_wait":
         seconds = float(block.fields.get("SECONDS", 1.0))
         sim_time += seconds

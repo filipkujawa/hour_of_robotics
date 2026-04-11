@@ -48,6 +48,50 @@ class MarsSimulator:
         
         # Initialize URDF tree
         self.urdf_tree = UrdfTree.from_file_path(self.urdf_path, entity_path_prefix="robot", frame_prefix="tf#robot/")
+        
+        # Track joint positions
+        self.current_joints = {j.name: 0.0 for j in self.urdf_tree.joints()}
+
+    def get_entity_path_for_link(self, link_name: str) -> str:
+        """Helper to find the entity path for a given link name."""
+        # UrdfTree organizes entities in a hierarchy matching the URDF
+        # We can find it by looking at the visual geometry paths
+        paths = self.urdf_tree.get_visual_geometry_paths(link_name)
+        if paths:
+            # Visual paths look like "robot/base_link/link1/visual_0"
+            # We want "robot/base_link/link1"
+            return "/".join(paths[0].split("/")[:-1])
+        
+        # Fallback to a guess if no visuals (shouldn't happen for most links in this URDF)
+        return f"robot/{link_name}"
+
+    def set_joint_position(self, joint_name: str, value: float, log: bool = True):
+        """Sets a joint position and optionally logs the transform to Rerun."""
+        joint = self.urdf_tree.get_joint_by_name(joint_name)
+        if joint:
+            self.current_joints[joint_name] = value
+            if log:
+                transform = joint.compute_transform(value)
+                entity_path = self.get_entity_path_for_link(joint.child_link)
+                self.rec.log(entity_path, transform)
+
+    def animate_joints(self, target_joints: dict[str, float], start_time: float, duration: float = 1.0):
+        """Interpolates joints from current to target over duration."""
+        start_joints = self.current_joints.copy()
+        fps = 30
+        num_steps = max(1, int(duration * fps))
+        
+        for i in range(1, num_steps + 1):
+            t = i / num_steps
+            # Use smoothstep for more natural movement
+            smooth_t = t * t * (3 - 2 * t)
+            curr_time = start_time + t * duration
+            self.rec.set_time("sim_time", duration=curr_time)
+            
+            for name, target_val in target_joints.items():
+                start_val = start_joints.get(name, 0.0)
+                interp_val = start_val + (target_val - start_val) * smooth_t
+                self.set_joint_position(name, interp_val, log=True)
 
     def setup_robot_model(self):
         """Initializes the robot model and blueprint."""
@@ -74,9 +118,6 @@ class MarsSimulator:
 
         # Log world orientation (ROS style: RHS, Z up)
         self.rec.log("/", rr.ViewCoordinates.RIGHT_HAND_Z_UP, static=True)
-
-        # Log a fixed origin marker
-        self.rec.log("origin", rr.Arrows3D(origins=[[0,0,0]], vectors=[[1,0,0], [0,1,0], [0,0,1]], colors=[[255,0,0], [0,255,0], [0,0,255]]), static=True)
 
         # Log the URDF structure
         self.urdf_tree.log_urdf_to_recording(self.rec)
@@ -115,17 +156,20 @@ class MarsSimulator:
 
     def move_forward(self, steps: float, start_time: float, duration: float = 1.0):
         """Simulates moving forward with interpolation for smoothness."""
-        distance = steps * 1.0
+        # Step size updated to 0.25m
+        distance = steps * 0.25
         start_x, start_y = self.pos_x, self.pos_y
         target_x = start_x + distance * math.cos(self.heading)
         target_y = start_y + distance * math.sin(self.heading)
         
-        fps = 15
+        fps = 30
         num_steps = max(1, int(duration * fps))
         for i in range(1, num_steps + 1):
             t = i / num_steps
-            self.pos_x = start_x + (target_x - start_x) * t
-            self.pos_y = start_y + (target_y - start_y) * t
+            # Use smoothstep for more natural acceleration/deceleration
+            smooth_t = t * t * (3 - 2 * t)
+            self.pos_x = start_x + (target_x - start_x) * smooth_t
+            self.pos_y = start_y + (target_y - start_y) * smooth_t
             self.rec.set_time("sim_time", duration=start_time + t * duration)
             self.log_current_state()
 
@@ -135,11 +179,13 @@ class MarsSimulator:
         rads = math.radians(degrees)
         target_heading = start_heading + (rads if direction == "LEFT" else -rads)
         
-        fps = 15
+        fps = 30
         num_steps = max(1, int(duration * fps))
         for i in range(1, num_steps + 1):
             t = i / num_steps
-            self.heading = start_heading + (target_heading - start_heading) * t
+            # Use smoothstep for more natural rotation
+            smooth_t = t * t * (3 - 2 * t)
+            self.heading = start_heading + (target_heading - start_heading) * smooth_t
             self.rec.set_time("sim_time", duration=start_time + t * duration)
             self.log_current_state()
 
