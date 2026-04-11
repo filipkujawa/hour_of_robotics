@@ -254,6 +254,10 @@ export class RobotConnection {
 
   async say(text: string): Promise<void> {
     this.onLog(`Say: "${text}"`);
+    if (this.ttsTopic) {
+      this.ttsTopic.publish({ data: text });
+      return;
+    }
     return this.executeSkill("speak", { text });
   }
 
@@ -561,14 +565,14 @@ export class RobotConnection {
       const actionClient = new roslib.ActionClient({
         ros: this.ros,
         serverName: "/execute_skill",
-        actionName: "maurice_msgs/ExecuteSkill",
+        actionName: "brain_messages/ExecuteSkill",
       });
 
       const goal = new roslib.Goal({
         actionClient,
         goalMessage: {
-          skill_name: skillName,
-          parameters: JSON.stringify(parameters),
+          skill_type: skillName,
+          inputs: JSON.stringify(parameters),
         },
       });
 
