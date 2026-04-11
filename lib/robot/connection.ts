@@ -118,8 +118,8 @@ export class RobotConnection {
 
     this.armService = new roslib.Service({
       ros: this.ros,
-      name: "/mars/arm/goto_js_v2",
-      serviceType: "maurice_msgs/GotoJSV2",
+      name: "/mars/arm/goto_js",
+      serviceType: "maurice_msgs/GotoJS",
     });
 
     this.headTopic = new roslib.Topic({
@@ -214,9 +214,15 @@ export class RobotConnection {
   async armGoToJoints(joints: number[]): Promise<void> {
     if (!this.armService) return;
 
+    const jointTargets = joints.length > 6 ? joints.slice(0, 6) : joints;
+    if (jointTargets.length !== 6) {
+      this.onError(`Arm expected 6 joints, got ${jointTargets.length}`);
+      return;
+    }
+
     return new Promise((resolve, reject) => {
       this.armService.callService(
-        { joint_positions: joints, duration: 2.0 },
+        { data: { data: jointTargets }, time: 2.0 },
         () => { this.onLog("Arm moved"); resolve(); },
         (err: string) => { this.onError(`Arm error: ${err}`); reject(new Error(err)); }
       );
@@ -225,7 +231,7 @@ export class RobotConnection {
 
   async armHome(): Promise<void> {
     this.onLog("Arm -> home");
-    return this.executeSkill("arm_zero_position", {});
+    return this.executeSkill("innate-os/arm_zero_position", { duration: 2000 });
   }
 
   async wave(): Promise<void> {
@@ -581,6 +587,8 @@ export class RobotConnection {
     }
 
     const roslib = await getRoslib();
+    const inputsJson = JSON.stringify(parameters);
+    this.onLog(`Sending skill "${skillName}" with inputs ${inputsJson}`);
 
     return new Promise((resolve, reject) => {
       const actionClient = new roslib.ActionClient({
@@ -593,11 +601,25 @@ export class RobotConnection {
         actionClient,
         goalMessage: {
           skill_type: skillName,
-          inputs: JSON.stringify(parameters),
+          inputs: inputsJson,
         },
       });
 
-      goal.on("result", () => {
+      goal.on("feedback", (feedback: unknown) => {
+        this.onLog(`Skill "${skillName}" feedback: ${JSON.stringify(feedback)}`);
+      });
+
+      goal.on("result", (result: unknown) => {
+        this.onLog(`Skill "${skillName}" result: ${JSON.stringify(result)}`);
+        // Attempt to detect failure in common result shapes
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const res = (result as any)?.result ?? result;
+        if (res && res.success === false) {
+          const msg = res.message || "Skill reported failure";
+          this.onError(`Skill "${skillName}" failed: ${msg}`);
+          reject(new Error(String(msg)));
+          return;
+        }
         this.onLog(`Skill "${skillName}" done`);
         resolve();
       });
