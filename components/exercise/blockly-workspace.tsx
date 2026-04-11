@@ -653,10 +653,6 @@ export function BlocklyWorkspace({
             <button onClick={() => setLeftPanel("exercise")} className={`text-[11px] font-medium px-3 py-1 rounded transition-all ${leftPanel === "exercise" ? "bg-white text-[#1a1a19] shadow-sm" : "text-[#9c9c9a] hover:text-[#6b6b69]"}`}>
               Exercise
             </button>
-            <button onClick={() => setLeftPanel("chat")} className={`text-[11px] font-medium px-3 py-1 rounded transition-all flex items-center gap-1.5 ${leftPanel === "chat" ? "bg-white text-[#1a1a19] shadow-sm" : "text-[#9c9c9a] hover:text-[#6b6b69]"}`}>
-              <MessageCircle className="h-3 w-3" />
-              Ask Mars
-            </button>
           </nav>
         </div>
         <div className="flex items-center gap-2.5">
