@@ -1,6 +1,46 @@
-import showcaseNavigateToTheTagXml from "@/content/scaffolds/showcase-navigate-to-the-tag.xml";
-import showcasePickItUpXml from "@/content/scaffolds/showcase-pick-it-up.xml";
-import showcasePlaceItHigherXml from "@/content/scaffolds/showcase-place-it-higher.xml";
+const showcaseNavigateToTheTagXml = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="mars_when_tag" x="28" y="32">
+    <statement name="DO">
+      <block type="mars_drive_to">
+        <field name="INSTRUCTION">the AprilTag</field>
+      </block>
+    </statement>
+  </block>
+</xml>`;
+
+const showcasePickItUpXml = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="mars_gripper" x="28" y="32">
+    <field name="ACTION">OPEN</field>
+    <next>
+      <block type="mars_arm_move_to">
+        <field name="X">0</field>
+        <field name="Y">10</field>
+        <field name="Z">5</field>
+        <next>
+          <block type="mars_gripper">
+            <field name="ACTION">CLOSE</field>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`;
+
+const showcasePlaceItHigherXml = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="mars_arm_move_to" x="28" y="32">
+    <field name="X">0</field>
+    <field name="Y">10</field>
+    <field name="Z">30</field>
+    <next>
+      <block type="mars_gripper">
+        <field name="ACTION">OPEN</field>
+        <next>
+          <block type="mars_arm_home"></block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`;
 
 export type Role = "student" | "teacher";
 export type LessonStep = "learn" | "exercise";
