@@ -44,6 +44,43 @@ const movementBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Turn Mars left or right",
   },
   {
+    type: "mars_move_forward_v",
+    message0: "move forward %1 steps",
+    args0: [{ type: "input_value", name: "STEPS", check: "Number" }],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#00b894",
+    tooltip: "Move forward — plug in a variable or expression for steps",
+  },
+  {
+    type: "mars_move_backward_v",
+    message0: "move backward %1 steps",
+    args0: [{ type: "input_value", name: "STEPS", check: "Number" }],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#00b894",
+    tooltip: "Move backward — plug in a variable or expression for steps",
+  },
+  {
+    type: "mars_turn_v",
+    message0: "turn %1 by %2 degrees",
+    args0: [
+      {
+        type: "field_dropdown",
+        name: "DIRECTION",
+        options: [
+          ["left", "LEFT"],
+          ["right", "RIGHT"],
+        ],
+      },
+      { type: "input_value", name: "DEGREES", check: "Number" },
+    ],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#00b894",
+    tooltip: "Turn — plug in a variable or expression for degrees",
+  },
+  {
     type: "mars_stop",
     message0: "stop moving",
     previousStatement: null,

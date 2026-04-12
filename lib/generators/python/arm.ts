@@ -1,4 +1,4 @@
-import { pythonGenerator } from "blockly/python";
+import { pythonGenerator, Order } from "blockly/python";
 
 export function registerArmGenerators() {
   pythonGenerator.forBlock["mars_arm_home"] = function () {
@@ -9,6 +9,13 @@ export function registerArmGenerators() {
     const x = block.getFieldValue("X");
     const y = block.getFieldValue("Y");
     const z = block.getFieldValue("Z");
+    return `mars.arm_move_to(${x}, ${y}, ${z})\n`;
+  };
+
+  pythonGenerator.forBlock["mars_arm_move_to_v"] = function (block, generator) {
+    const x = generator.valueToCode(block, "X", Order.NONE) || "0";
+    const y = generator.valueToCode(block, "Y", Order.NONE) || "0";
+    const z = generator.valueToCode(block, "Z", Order.NONE) || "20";
     return `mars.arm_move_to(${x}, ${y}, ${z})\n`;
   };
 

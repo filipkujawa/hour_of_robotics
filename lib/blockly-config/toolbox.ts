@@ -7,8 +7,11 @@ export const toolboxConfig = {
       colour: "#00b894",
       contents: [
         { kind: "block", type: "mars_move_forward" },
+        { kind: "block", type: "mars_move_forward_v" },
         { kind: "block", type: "mars_move_backward" },
+        { kind: "block", type: "mars_move_backward_v" },
         { kind: "block", type: "mars_turn" },
+        { kind: "block", type: "mars_turn_v" },
         { kind: "block", type: "mars_stop" },
         { kind: "block", type: "mars_set_speed" },
       ],
@@ -29,6 +32,7 @@ export const toolboxConfig = {
       contents: [
         { kind: "block", type: "mars_arm_home" },
         { kind: "block", type: "mars_arm_move_to" },
+        { kind: "block", type: "mars_arm_move_to_v" },
         { kind: "block", type: "mars_gripper" },
         { kind: "block", type: "mars_wave" },
         { kind: "block", type: "mars_pick_up" },
@@ -89,6 +93,7 @@ export const toolboxConfig = {
       colour: "#a29bfe",
       contents: [
         { kind: "block", type: "mars_head_tilt" },
+        { kind: "block", type: "mars_head_tilt_v" },
         { kind: "block", type: "mars_head_emotion" },
       ],
     },

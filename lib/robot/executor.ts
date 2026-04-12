@@ -129,6 +129,25 @@ export class BlockExecutor {
         await this.robot.turn("RIGHT", Number(block.fields.ANGLE) || 90);
         break;
 
+      case "mars_move_forward_v": {
+        const steps = Number(await this.evaluateValue(block.inputs.STEPS || null)) || 1;
+        await this.robot.moveForward(steps);
+        break;
+      }
+
+      case "mars_move_backward_v": {
+        const steps = Number(await this.evaluateValue(block.inputs.STEPS || null)) || 1;
+        await this.robot.moveBackward(steps);
+        break;
+      }
+
+      case "mars_turn_v": {
+        const dir = String(block.fields.DIRECTION || "LEFT");
+        const deg = Number(await this.evaluateValue(block.inputs.DEGREES || null)) || 90;
+        await this.robot.turn(dir, deg);
+        break;
+      }
+
       case "mars_stop":
         this.robot.stop();
         break;
@@ -144,9 +163,17 @@ export class BlockExecutor {
         break;
 
       case "mars_arm_move_to": {
-        const x = (Number(block.fields.X) || 0) / 100;  // cm to m
+        const x = (Number(block.fields.X) || 0) / 100;
         const y = (Number(block.fields.Y) || 0) / 100;
         const z = (Number(block.fields.Z) || 20) / 100;
+        await this.robot.executeSkill("innate-os/arm_move_to_xyz", { x, y, z });
+        break;
+      }
+
+      case "mars_arm_move_to_v": {
+        const x = (Number(await this.evaluateValue(block.inputs.X || null)) || 0) / 100;
+        const y = (Number(await this.evaluateValue(block.inputs.Y || null)) || 0) / 100;
+        const z = (Number(await this.evaluateValue(block.inputs.Z || null)) || 20) / 100;
         await this.robot.executeSkill("innate-os/arm_move_to_xyz", { x, y, z });
         break;
       }
@@ -228,6 +255,13 @@ export class BlockExecutor {
         this.robot.setHeadTilt(Number(block.fields.DEGREES) || 0);
         await new Promise((r) => setTimeout(r, 500));
         break;
+
+      case "mars_head_tilt_v": {
+        const deg = Number(await this.evaluateValue(block.inputs.DEGREES || null)) || 0;
+        this.robot.setHeadTilt(deg);
+        await new Promise((r) => setTimeout(r, 500));
+        break;
+      }
 
       case "mars_head_emotion":
         await this.robot.executeSkill("innate-os/head_emotion", {

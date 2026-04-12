@@ -23,6 +23,19 @@ const armBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Move the arm end-effector to a position (cm)",
   },
   {
+    type: "mars_arm_move_to_v",
+    message0: "move arm to x %1 y %2 z %3",
+    args0: [
+      { type: "input_value", name: "X", check: "Number" },
+      { type: "input_value", name: "Y", check: "Number" },
+      { type: "input_value", name: "Z", check: "Number" },
+    ],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#e17055",
+    tooltip: "Move arm — plug in variables or expressions for X, Y, Z (cm)",
+  },
+  {
     type: "mars_gripper",
     message0: "%1 gripper",
     args0: [

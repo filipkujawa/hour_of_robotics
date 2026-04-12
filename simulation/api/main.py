@@ -37,24 +37,39 @@ class SimulationResponse(BaseModel):
     session_id: str
     rerun_url: str
 
+def eval_input_number(block: BlockData, name: str, default: float = 0) -> float:
+    """Extract a number from either a field or a nested input block (for _v variants)."""
+    # Check fields first (fixed number blocks)
+    if name in block.fields:
+        return float(block.fields[name])
+    # Check inputs (variable/expression blocks)
+    input_block = block.inputs.get(name)
+    if input_block:
+        if isinstance(input_block, dict):
+            # It's a nested block — extract its field value
+            return float(input_block.get("fields", {}).get("NUM", default))
+        if isinstance(input_block, BlockData):
+            return float(input_block.fields.get("NUM", default))
+    return default
+
 def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time: float) -> float:
     """Recursively processes a chain of blocks."""
     if not block:
         return sim_time
         
-    if block.type == "mars_move_forward":
-        steps = float(block.fields.get("STEPS", 1))
+    if block.type in ("mars_move_forward", "mars_move_forward_v"):
+        steps = eval_input_number(block, "STEPS", 1)
         duration = 1.0
         sim.move_forward(steps, sim_time, duration)
         sim_time += duration
-    elif block.type == "mars_move_backward":
-        steps = float(block.fields.get("STEPS", 1))
+    elif block.type in ("mars_move_backward", "mars_move_backward_v"):
+        steps = eval_input_number(block, "STEPS", 1)
         duration = 1.0
         sim.move_forward(-steps, sim_time, duration)
         sim_time += duration
-    elif block.type == "mars_turn":
+    elif block.type in ("mars_turn", "mars_turn_v"):
         direction = block.fields.get("DIRECTION", "LEFT")
-        degrees = float(block.fields.get("DEGREES", 90))
+        degrees = eval_input_number(block, "DEGREES", 90)
         duration = 0.5
         sim.turn(direction, degrees, sim_time, duration)
         sim_time += duration
@@ -83,11 +98,10 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
             "joint6": 0.010737865515199488,
         }, sim_time, duration)
         sim_time += duration
-    elif block.type == "mars_arm_move_to":
-        # Real IK using ikpy with the actual URDF kinematic chain
-        x = float(block.fields.get("X", 0)) / 100.0  # cm to m
-        y = float(block.fields.get("Y", 0)) / 100.0
-        z = float(block.fields.get("Z", 20)) / 100.0
+    elif block.type in ("mars_arm_move_to", "mars_arm_move_to_v"):
+        x = eval_input_number(block, "X", 0) / 100.0
+        y = eval_input_number(block, "Y", 0) / 100.0
+        z = eval_input_number(block, "Z", 20) / 100.0
         duration = 1.0
         joints = sim.solve_ik(x, y, z)
         sim.animate_joints(joints, sim_time, duration)
@@ -113,7 +127,7 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
         # Back to home-ish
         sim.animate_joints({"joint2": 0.0, "joint3": 0.0, "joint4": 0.0, "joint5": 0.0}, sim_time, duration)
         sim_time += duration
-    elif block.type == "mars_head_tilt":
+    elif block.type in ("mars_head_tilt", "mars_head_tilt_v"):
         degrees = float(block.fields.get("DEGREES", 0))
         duration = 0.5
         sim.animate_joints({"joint_head": degrees * 3.14159 / 180.0}, sim_time, duration)
