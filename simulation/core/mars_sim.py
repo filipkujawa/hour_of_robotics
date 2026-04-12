@@ -59,12 +59,19 @@ class MarsSimulator:
         # Initialize URDF tree
         self.urdf_tree = UrdfTree.from_file_path(self.urdf_path, entity_path_prefix="robot", frame_prefix="tf#robot/")
 
-        # IK chain from the same URDF (base_link → ee_link)
+        # IK chain from the same URDF (base_link → link5 → ee_link)
+        # ikpy follows joint6 (gripper finger) as the first child of link5,
+        # but the real EE is at ee_joint (a sibling fixed joint off link5).
+        # We disable joint6 in the mask and adjust last_link_vector so the
+        # chain endpoint matches the ee_link position:
+        #   joint6 origin = [0.044, -0.0092, 0] from link5
+        #   ee_joint origin = [0.091838, 0, 0] from link5
+        #   needed last_link_vector = ee - j6 = [0.047838, 0.0092, 0]
         self.ik_chain = ikpy.chain.Chain.from_urdf_file(
             self.urdf_path,
             base_elements=["base_link"],
-            last_link_vector=[0.091838, 0, 0],
-            active_links_mask=[False, True, True, True, True, True, True, False],
+            last_link_vector=[0.047838, 0.0092, 0],
+            active_links_mask=[False, True, True, True, True, True, False, False],
             name="arm"
         )
 
@@ -98,15 +105,16 @@ class MarsSimulator:
                 self.rec.log(entity_path, transform)
 
     # Joint limits for clamping IK seeds
+    # Indices: 0=base(fixed), 1=j1, 2=j2, 3=j3, 4=j4, 5=j5, 6=j6(fixed/gripper), 7=ee(fixed)
     _IK_LIMITS = [
-        None,  # index 0: base link (fixed)
-        (-1.5708, 1.5708),   # joint1
-        (-1.5708, 1.22),     # joint2
-        (-1.5708, 1.7453),   # joint3
-        (-1.9199, 1.7453),   # joint4
-        (-1.5708, 1.5708),   # joint5
-        (-0.8727, 0.3491),   # joint6
-        None,  # index 7: ee link (fixed)
+        None,                  # index 0: base link (fixed)
+        (-1.5708, 1.5708),    # joint1
+        (-1.5708, 1.22),      # joint2
+        (-1.5708, 1.7453),    # joint3
+        (-1.9199, 1.7453),    # joint4
+        (-1.5708, 1.5708),    # joint5
+        None,                  # index 6: joint6 (inactive — gripper, not EE)
+        None,                  # index 7: ee link (fixed)
     ]
 
     def _clamp_seed(self, seed: list[float]) -> list[float]:
@@ -120,15 +128,26 @@ class MarsSimulator:
     def solve_ik(self, x: float, y: float, z: float) -> dict[str, float]:
         """Solve IK for a target XYZ position (meters).
 
+        Uses joints 1-5 only (joint6 is the gripper, not part of the EE chain).
+        Constrains the wrist to stay horizontal (parallel to ground), matching
+        the real robot's MoveIt2 orientation constraint for pick-and-place.
         Tries multiple seeds and picks the collision-free solution
-        closest to the current joint configuration (minimal joint movement),
-        matching how MoveIt2 selects IK solutions.
+        closest to the current joint configuration (minimal joint movement).
         """
-        target = [x, y, z]
+        # Build target frame: position + orientation with Z-axis up (wrist level)
+        theta = math.atan2(y, x) if abs(x) > 0.001 or abs(y) > 0.001 else 0.0
+        target_frame = np.eye(4)
+        target_frame[:3, 3] = [x, y, z]
+        target_frame[:3, :3] = np.array([
+            [math.cos(theta), -math.sin(theta), 0],
+            [math.sin(theta),  math.cos(theta), 0],
+            [0,                0,               1],
+        ])
 
         # Build current config for the chain (8 elements: base + 6 joints + ee)
+        # joint6 slot is kept at 0 since it's inactive in the IK mask
         current = [0.0] * 8
-        for i, jname in enumerate(["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]):
+        for i, jname in enumerate(["joint1", "joint2", "joint3", "joint4", "joint5"]):
             current[i + 1] = self.current_joints.get(jname, 0.0)
         current = self._clamp_seed(current)
 
@@ -150,19 +169,27 @@ class MarsSimulator:
                 seed[3] = current[3] + j3_off
                 seeds.append(self._clamp_seed(seed))
 
+        # Preserve current gripper value — IK only solves joints 1-5
+        current_j6 = self.current_joints.get("joint6", 0.0)
+
         # Solve IK with each seed, collect valid solutions
         candidates = []
-        current_arr = np.array(current[1:7])
+        current_arr = np.array(current[1:6])  # joints 1-5 only
 
         for seed in seeds:
             try:
-                ik_result = self.ik_chain.inverse_kinematics(target, initial_position=seed)
-                joints = {f"joint{i+1}": float(ik_result[i+1]) for i in range(6)}
+                # Solve with Z-axis orientation constraint (wrist stays horizontal)
+                ik_result = self.ik_chain.inverse_kinematics_frame(
+                    target_frame, initial_position=seed, orientation_mode="Z"
+                )
+                # Build joint dict: joints 1-5 from IK, joint6 preserved
+                joints = {f"joint{i+1}": float(ik_result[i+1]) for i in range(5)}
+                joints["joint6"] = current_j6
 
                 if self.collision.check_collision(joints):
                     continue
 
-                result_arr = np.array([joints[f"joint{i+1}"] for i in range(6)])
+                result_arr = np.array([joints[f"joint{i+1}"] for i in range(5)])
                 dist = float(np.linalg.norm(result_arr - current_arr))
                 candidates.append((dist, joints))
             except Exception:
@@ -172,18 +199,33 @@ class MarsSimulator:
             candidates.sort(key=lambda x: x[0])
             return candidates[0][1]
 
-        # Fallback with a safe zero seed
+        # Fallback: try position-only (no orientation constraint) with safe seed
         safe_seed = self._clamp_seed([0.0] * 8)
-        ik_result = self.ik_chain.inverse_kinematics(target, initial_position=safe_seed)
-        return {f"joint{i+1}": float(ik_result[i+1]) for i in range(6)}
+        try:
+            ik_result = self.ik_chain.inverse_kinematics_frame(
+                target_frame, initial_position=safe_seed, orientation_mode="Z"
+            )
+        except Exception:
+            ik_result = self.ik_chain.inverse_kinematics(
+                [x, y, z], initial_position=safe_seed
+            )
+        joints = {f"joint{i+1}": float(ik_result[i+1]) for i in range(5)}
+        joints["joint6"] = current_j6
+        return joints
 
     def animate_joints(self, target_joints: dict[str, float], start_time: float, duration: float = 1.0):
         """Interpolates joints from current to target over duration, avoiding collisions."""
         start_joints = {k: v for k, v in self.current_joints.items()}
 
+        # Build full target config: current joints with only the specified ones changed.
+        # Without this, unspecified joints default to 0 in the planner, causing
+        # the arm to wildly move when only the gripper should change.
+        full_target = {k: v for k, v in self.current_joints.items()}
+        full_target.update(target_joints)
+
         # Plan a collision-free trajectory using FCL
         trajectory = self.collision.plan_collision_free(
-            start_joints, target_joints, num_waypoints=20
+            start_joints, full_target, num_waypoints=20
         )
 
         fps = 30
@@ -200,7 +242,13 @@ class MarsSimulator:
             waypoint = trajectory[traj_idx]
 
             for name, target_val in target_joints.items():
-                val = waypoint.get(name, start_joints.get(name, 0.0))
+                if name in waypoint:
+                    # Arm joint — use collision-planned trajectory
+                    val = waypoint[name]
+                else:
+                    # Non-arm joint (e.g. joint_head, joint6M) — interpolate directly
+                    start_val = start_joints.get(name, 0.0)
+                    val = start_val + (target_val - start_val) * smooth_t
                 self.set_joint_position(name, val, log=True)
 
     def setup_robot_model(self):
@@ -227,6 +275,9 @@ class MarsSimulator:
                 state="collapsed",
                 loop_mode="All"
             ),
+            rrb.BlueprintPanel(state="hidden"),
+            rrb.SelectionPanel(state="hidden"),
+            rrb.TopPanel(state="hidden"),
             collapse_panels=True,
             auto_views=False
         )
@@ -249,7 +300,7 @@ class MarsSimulator:
         self.rec.log(
             "props/cube",
             rr.Transform3D(
-                translation=[0.35, 0.0, 0.02],
+                translation=[0.286, 0.0, 0.02],
                 parent_frame="tf#/",
                 child_frame="tf#/props/cube"
             ),
@@ -262,7 +313,8 @@ class MarsSimulator:
         )
 
     # Known object positions in world frame (meters)
-    CUBE_POSITION = np.array([0.35, 0.0, 0.02])
+    # Cube is 20cm from the front panel of the robot (arm base at x=0.086)
+    CUBE_POSITION = np.array([0.286, 0.0, 0.02])
 
     # Camera mounting from URDF (relative to parent link)
     # Head camera left: parent=head, xyz=[0.04327, 0.0297, -0.000275], rpy=[0,0,0]

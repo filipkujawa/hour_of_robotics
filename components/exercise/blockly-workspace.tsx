@@ -29,7 +29,7 @@ type WidgetId = "console" | "rerun" | "camera" | "python";
 type PaneId = "bottom" | "right";
 
 const DEFAULT_WIDGET_LAYOUT: Record<PaneId, WidgetId[]> = {
-  bottom: ["rerun", "camera", "python"],
+  bottom: ["rerun", "camera"],
   right: ["console"],
 };
 

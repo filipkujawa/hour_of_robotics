@@ -109,6 +109,16 @@ def eval_value_block(sim: MarsSimulator, block) -> Any:
         if op == "GTE": return a >= b
         return False
 
+    if btype == "logic_operation":
+        a = eval_value_block(sim, block.inputs.get("A"))
+        b = eval_value_block(sim, block.inputs.get("B"))
+        op = block.fields.get("OP", "AND")
+        if op == "AND":
+            return bool(a) and bool(b)
+        if op == "OR":
+            return bool(a) or bool(b)
+        return False
+
     if btype == "logic_negate":
         return not eval_value_block(sim, block.inputs.get("BOOL"))
 
@@ -206,7 +216,8 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
         # Convert to base_link frame for solve_ik
         x = eval_input_value(sim, block, "X", 0) + 0.086
         y = eval_input_value(sim, block, "Y", 0) - 0.053
-        z = eval_input_value(sim, block, "Z", 0.1)
+        raw_z = eval_input_value(sim, block, "Z", 0.1)
+        z = max(0.05, raw_z)  # Match real robot's min safe height clamp
         duration = 1.0
         joints = sim.solve_ik(x, y, z)
         sim.animate_joints(joints, sim_time, duration)
