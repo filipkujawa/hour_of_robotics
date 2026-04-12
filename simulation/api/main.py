@@ -404,7 +404,8 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
     elif block.type in ("mars_drive_meters", "mars_drive_meters_v"):
         direction = block.fields.get("DIRECTION", "FORWARD")
         meters = eval_input_value(sim, block, "METERS", 0.5)
-        steps = meters / 0.25
+        # Convert meters to steps using the calibrated constant
+        steps = meters / sim.METERS_PER_STEP
         if direction == "BACKWARD":
             steps = -steps
         duration = max(0.5, abs(meters) * 2)
