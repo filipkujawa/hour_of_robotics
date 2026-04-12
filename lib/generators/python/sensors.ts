@@ -41,6 +41,12 @@ export function registerSensorGenerators() {
     return ["mars.is_tag_detected_head()", Order.FUNCTION_CALL];
   };
 
+  pythonGenerator.forBlock["mars_get_angle_to_tag"] = function (block) {
+    const x = pythonGenerator.valueToCode(block, "X", Order.NONE) || "0";
+    const y = pythonGenerator.valueToCode(block, "Y", Order.NONE) || "0";
+    return [`mars.get_angle_to_tag(${x}, ${y})`, Order.FUNCTION_CALL];
+  };
+
   pythonGenerator.forBlock["mars_get_battery"] = function () {
     return ["mars.get_battery()", Order.FUNCTION_CALL];
   };

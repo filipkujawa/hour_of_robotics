@@ -709,6 +709,20 @@ export class BlockExecutor {
         return await this.robot.isTagDetectedHead();
       }
 
+      // ---- Angle to tag ----
+      case "mars_get_angle_to_tag": {
+        const tagX = Number(await this.evaluateValue(block.inputs.X || null)) || 0;
+        const tagY = Number(await this.evaluateValue(block.inputs.Y || null)) || 0;
+        if (tagX === 0 && tagY === 0) {
+          this.onLog("Angle to tag: no valid position (0, 0)");
+          return 0;
+        }
+        // atan2(y, x): positive = left, negative = right
+        const angleDeg = Math.round(Math.atan2(tagY, tagX) * (180 / Math.PI));
+        this.onLog(`Angle to tag: ${angleDeg}° (x=${tagX}, y=${tagY})`);
+        return angleDeg;
+      }
+
       // ---- Battery & Heading ----
       case "mars_get_battery":
         return await this.robot.getBattery();

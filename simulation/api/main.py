@@ -74,6 +74,14 @@ def eval_value_block(sim: MarsSimulator, block) -> Any:
         tag = sim.get_tag_in_camera_frame("HEAD")
         return tag.get(axis.lower(), 0)
 
+    if btype == "mars_get_angle_to_tag":
+        import math as _m
+        tag_x = float(eval_value_block(sim, block.inputs.get("X")) or 0)
+        tag_y = float(eval_value_block(sim, block.inputs.get("Y")) or 0)
+        if tag_x == 0 and tag_y == 0:
+            return 0
+        return round(_m.degrees(_m.atan2(tag_y, tag_x)))
+
     if btype == "mars_is_tag_detected":
         return sim.is_tag_visible("ARM") or sim.is_tag_visible("HEAD")
 

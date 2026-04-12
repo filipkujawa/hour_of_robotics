@@ -113,6 +113,17 @@ const sensorBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Returns true if an AprilTag is currently detected by the head camera (/aruco_left/detected)",
   },
   {
+    type: "mars_get_angle_to_tag",
+    message0: "angle to tag x %1 y %2",
+    args0: [
+      { type: "input_value", name: "X", check: "Number" },
+      { type: "input_value", name: "Y", check: "Number" },
+    ],
+    output: "Number",
+    colour: "#0984e3",
+    tooltip: "Returns the angle (degrees) to turn toward a tag. Positive = left, negative = right. Plug into turn block.",
+  },
+  {
     type: "mars_get_battery",
     message0: "battery %",
     output: "Number",

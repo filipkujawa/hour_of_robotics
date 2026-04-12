@@ -60,6 +60,7 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_tag_detect_head" },
         { kind: "block", type: "mars_is_tag_detected_arm" },
         { kind: "block", type: "mars_is_tag_detected_head" },
+        { kind: "block", type: "mars_get_angle_to_tag" },
         { kind: "block", type: "mars_get_battery" },
         { kind: "block", type: "mars_get_heading" },
         { kind: "label", text: "Store sensor values:" },
