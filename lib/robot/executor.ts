@@ -147,7 +147,7 @@ export class BlockExecutor {
         const x = (Number(block.fields.X) || 0) / 100;  // cm to m
         const y = (Number(block.fields.Y) || 0) / 100;
         const z = (Number(block.fields.Z) || 20) / 100;
-        await this.robot.executeSkill("arm_move_to_xyz", { x, y, z });
+        await this.robot.executeSkill("innate-os/arm_move_to_xyz", { x, y, z });
         break;
       }
 
@@ -230,7 +230,7 @@ export class BlockExecutor {
         break;
 
       case "mars_head_emotion":
-        await this.robot.executeSkill("head_emotion", {
+        await this.robot.executeSkill("innate-os/head_emotion", {
           emotion: String(block.fields.EMOTION || "neutral"),
         });
         break;

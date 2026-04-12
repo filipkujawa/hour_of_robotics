@@ -265,7 +265,7 @@ export class RobotConnection {
 
   async wave(): Promise<void> {
     this.onLog("Waving!");
-    return this.executeSkill("head_emotion", { emotion: "excited" });
+    return this.executeSkill("innate-os/wave", {});
   }
 
   async gripperOpen(): Promise<void> {
@@ -292,7 +292,7 @@ export class RobotConnection {
 
   async pickUp(): Promise<void> {
     this.onLog("Picking up");
-    return this.executeSkill("pick_up_piece_simple", {});
+    return this.executeSkill("innate-os/pick_up_piece_simple", {});
   }
 
   // ==========================================
@@ -305,7 +305,7 @@ export class RobotConnection {
       this.ttsTopic.publish({ data: text });
       return;
     }
-    return this.executeSkill("speak", { text });
+    return this.executeSkill("innate-os/speak", { text });
   }
 
   async setVolume(percent: number): Promise<void> {

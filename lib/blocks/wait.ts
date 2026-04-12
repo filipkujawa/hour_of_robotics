@@ -2,22 +2,19 @@ import * as Blockly from "blockly";
 
 // Dynamic skills list — updated at runtime when fetched from the robot
 let _availableSkills: [string, string][] = [
-  ["arm_zero_position", "arm_zero_position"],
-  ["arm_move_to_xyz", "arm_move_to_xyz"],
-  ["arm_circle_motion", "arm_circle_motion"],
-  ["head_emotion", "head_emotion"],
-  ["open_gripper", "open_gripper"],
-  ["close_gripper", "close_gripper"],
-  ["pick_up_piece_simple", "pick_up_piece_simple"],
-  ["navigate_to_position", "navigate_to_position"],
-  ["navigate_with_vision", "navigate_with_vision"],
-  ["scan_for_objects", "scan_for_objects"],
-  ["record_position", "record_position"],
-  ["recalibrate_manual", "recalibrate_manual"],
-  ["detect_opponent_move", "detect_opponent_move"],
-  ["send_email", "send_email"],
-  ["send_picture_via_email", "send_picture_via_email"],
-  ["retrieve_emails", "retrieve_emails"],
+  ["innate-os/arm_zero_position", "innate-os/arm_zero_position"],
+  ["innate-os/arm_move_to_xyz", "innate-os/arm_move_to_xyz"],
+  ["innate-os/arm_circle_motion", "innate-os/arm_circle_motion"],
+  ["innate-os/head_emotion", "innate-os/head_emotion"],
+  ["innate-os/wave", "innate-os/wave"],
+  ["innate-os/arm_utils", "innate-os/arm_utils"],
+  ["innate-os/pick_up_piece_simple", "innate-os/pick_up_piece_simple"],
+  ["innate-os/navigate_to_position", "innate-os/navigate_to_position"],
+  ["innate-os/navigate_with_vision", "innate-os/navigate_with_vision"],
+  ["innate-os/record_position", "innate-os/record_position"],
+  ["innate-os/recalibrate_manual", "innate-os/recalibrate_manual"],
+  ["innate-os/send_email", "innate-os/send_email"],
+  ["innate-os/send_picture_via_email", "innate-os/send_picture_via_email"],
 ];
 
 export function updateAvailableSkills(skills: string[]) {
