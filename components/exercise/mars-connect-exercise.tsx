@@ -39,6 +39,7 @@ export function MarsConnectExerciseView({
     clearArmFaults,
     armTorqueOn,
     armTorqueOff,
+    enableMicInput,
   } = useRobot();
 
   useEffect(() => {
@@ -203,6 +204,7 @@ export function MarsConnectExerciseView({
                   onClearFaults={clearArmFaults}
                   onTorqueOn={armTorqueOn}
                   onTorqueOff={armTorqueOff}
+                  onEnableMicInput={enableMicInput}
                 />
               </div>
             )}

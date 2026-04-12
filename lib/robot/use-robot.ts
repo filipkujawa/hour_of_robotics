@@ -129,6 +129,15 @@ export function useRobot() {
     }
   }, [addLog]);
 
+  const enableMicInput = useCallback(() => {
+    if (!robotRef.current) {
+      addLog("Not connected to robot", "error");
+      return;
+    }
+    robotRef.current.setActiveInputs(["micro"]);
+    addLog("Active inputs set to [micro]", "success");
+  }, [addLog]);
+
   const clearArmFaults = useCallback(async () => {
     if (!robotRef.current) {
       addLog("Not connected to robot", "error");
@@ -222,5 +231,6 @@ export function useRobot() {
     armTorqueOn,
     armTorqueOff,
     emergencyStop,
+    enableMicInput,
   };
 }

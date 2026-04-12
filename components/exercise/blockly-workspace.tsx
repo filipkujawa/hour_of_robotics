@@ -90,6 +90,7 @@ export function BlocklyWorkspace({
     armTorqueOn,
     armTorqueOff,
     emergencyStop,
+    enableMicInput,
   } = useRobot();
 
   const [loadingSkills, setLoadingSkills] = useState(false);
@@ -544,6 +545,7 @@ export function BlocklyWorkspace({
             onClearFaults={clearArmFaults}
             onTorqueOn={armTorqueOn}
             onTorqueOff={armTorqueOff}
+            onEnableMicInput={enableMicInput}
           />
         );
       case "rerun":

@@ -783,7 +783,7 @@ export class RobotConnection {
     this.ttsTopic.publish({ data: text });
   }
 
-  private setActiveInputs(inputs: string[]) {
+  setActiveInputs(inputs: string[]) {
     if (!this.activeInputsTopic) {
       this.onError("Active inputs topic unavailable");
       return;

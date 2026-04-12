@@ -9,6 +9,7 @@ export function RobotConsole({
   onClearFaults,
   onTorqueOn,
   onTorqueOff,
+  onEnableMicInput,
   armEstopped,
 }: {
   logs: LogEntry[];
@@ -16,6 +17,7 @@ export function RobotConsole({
   onClearFaults?: () => void;
   onTorqueOn?: () => void;
   onTorqueOff?: () => void;
+  onEnableMicInput?: () => void;
   armEstopped?: boolean | null;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,14 @@ export function RobotConsole({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {onEnableMicInput && (
+            <button
+              onClick={onEnableMicInput}
+              className="font-mono text-[10px] text-[#8a7d6d] transition hover:text-[#bfb49e]"
+            >
+              enable mic
+            </button>
+          )}
           {onClearFaults && (
             <button
               onClick={onClearFaults}
