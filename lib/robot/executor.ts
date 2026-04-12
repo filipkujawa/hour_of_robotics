@@ -173,9 +173,11 @@ export class BlockExecutor {
       }
 
       case "mars_arm_move_to_v": {
-        const x = (Number(await this.evaluateValue(block.inputs.X || null)) || 0) / 100;
-        const y = (Number(await this.evaluateValue(block.inputs.Y || null)) || 0) / 100;
-        const z = (Number(await this.evaluateValue(block.inputs.Z || null)) || 20) / 100;
+        const x = Number(await this.evaluateValue(block.inputs.X || null)) || 0;
+        const y = Number(await this.evaluateValue(block.inputs.Y || null)) || 0;
+        const rawZ = Number(await this.evaluateValue(block.inputs.Z || null)) || 0.1;
+        const z = Math.max(0.05, rawZ);
+        if (rawZ < 0.05) this.onLog(`Z clamped from ${rawZ.toFixed(3)} to 0.05m (min safe height)`);
         await this.robot.executeSkill("innate-os/arm_move_to_xyz", { x, y, z });
         break;
       }

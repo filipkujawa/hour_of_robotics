@@ -505,6 +505,7 @@ export class RobotConnection {
 
     // Clamp to innate-os range: -25 (down) to +15 (up)
     const clamped = Math.max(-25, Math.min(15, degrees));
+    this.headTiltRad = (clamped * Math.PI) / 180;
     this.onLog(`Head tilt -> ${clamped}°`);
     this.headTopic.publish({ data: clamped });
   }
@@ -618,6 +619,9 @@ export class RobotConnection {
     });
   }
 
+  // Current head tilt in radians (updated by setHeadTilt)
+  private headTiltRad = 0;
+
   async getTagPoseHead(axis: string): Promise<number> {
     if (!this.ros) return 0;
     const roslib = await getRoslib();
@@ -635,13 +639,45 @@ export class RobotConnection {
         if (resolved) return;
         resolved = true;
         topic.unsubscribe();
-        this.onLog(`Tag raw: ${JSON.stringify(message).slice(0, 200)}`);
+
         const pos = message?.pose?.position;
-        if (!pos) {
-          resolve(0);
-          return;
-        }
-        const val = axis === "X" ? pos.x : axis === "Y" ? pos.y : pos.z;
+        if (!pos) { resolve(0); return; }
+
+        // Tag is in camera optical frame: x=right, y=down, z=forward
+        const cam_x = pos.x;
+        const cam_y = pos.y;
+        const cam_z = pos.z;
+
+        // Camera is on the head which can tilt.
+        // Head joint: parent=base_link, origin xyz=[-0.041, -0.0002, 0.259], axis=[0,-1,0]
+        // Camera on head: xyz=[0.043, 0.030, -0.0003]
+        // Optical frame: rotated -90 around X, -90 around Z from camera link
+
+        // Head tilt angle (negative Y axis rotation)
+        const tilt = this.headTiltRad;
+
+        // Step 1: Camera optical → camera link (undo optical frame rotation)
+        // optical: x=right, y=down, z=forward → link: x=forward, y=left, z=up
+        const link_x = cam_z;   // optical z (forward) = link x
+        const link_y = -cam_x;  // optical x (right) = link -y
+        const link_z = -cam_y;  // optical y (down) = link -z
+
+        // Step 2: Camera link → head link (add camera offset on head)
+        const head_x = link_x + 0.043;
+        const head_y = link_y + 0.030;
+        const head_z = link_z - 0.0003;
+
+        // Step 3: Head link → base_link (apply head tilt + head origin)
+        // Head tilt rotates around -Y axis
+        const cos_t = Math.cos(-tilt);
+        const sin_t = Math.sin(-tilt);
+        const base_x = cos_t * head_x + sin_t * head_z + (-0.041);
+        const base_y = head_y + (-0.0002);
+        const base_z = -sin_t * head_x + cos_t * head_z + 0.259;
+
+        this.onLog(`Tag base_link: x=${base_x.toFixed(3)}, y=${base_y.toFixed(3)}, z=${base_z.toFixed(3)}`);
+
+        const val = axis === "X" ? base_x : axis === "Y" ? base_y : base_z;
         resolve(isNaN(val) ? 0 : Math.round(val * 1000) / 1000);
       };
 
@@ -745,7 +781,16 @@ export class RobotConnection {
       return;
     }
 
-    const inputsJson = JSON.stringify(parameters);
+    // Ensure all number values serialize as floats (e.g. 0 → 0.0)
+    // The robot's skill server requires float types, not int
+    const floatParams: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(parameters)) {
+      floatParams[k] = typeof v === "number" ? parseFloat(v.toFixed(6)) : v;
+    }
+    const inputsJson = JSON.stringify(floatParams).replace(
+      /":(\d+)([,}])/g,
+      '":$1.0$2'
+    );
     this.onLog(`Sending skill "${skillName}" with inputs ${inputsJson}`);
 
     // Use rosbridge's send_action_goal operation directly via callOnConnection
@@ -761,9 +806,7 @@ export class RobotConnection {
       }, 60000);
 
       // Listen for result/feedback via roslib's event system
-      // rosbridge sends responses with the same id
       this.ros.on(id, (msg: { values?: { result?: { success: boolean; message?: string }; feedback?: string } }) => {
-        // Check if this is a result (has result field)
         if (msg.values?.result) {
           clearTimeout(timeout);
           this.ros.off(id, undefined);
@@ -780,7 +823,6 @@ export class RobotConnection {
         }
       });
 
-      // Send via rosbridge protocol
       this.ros.callOnConnection({
         op: "send_action_goal",
         id: id,
@@ -792,6 +834,7 @@ export class RobotConnection {
         },
         feedback: true,
       });
+      this.onLog("Action goal sent");
     });
   }
 

@@ -9,7 +9,7 @@ import math
 import numpy as np
 import ikpy.chain
 from typing import Optional
-from simulation.core.collision import CollisionChecker
+from simulation.core.collision import CollisionChecker, _transform_matrix, _joint_transform
 
 def find_free_port():
     """Finds a free port on the local machine."""
@@ -260,6 +260,63 @@ class MarsSimulator:
             rr.Asset3D(path=self.cube_asset_path),
             static=True
         )
+
+    # Known object positions in world frame (meters)
+    CUBE_POSITION = np.array([0.35, 0.0, 0.02])
+
+    # Camera mounting from URDF (relative to parent link)
+    # Head camera left: parent=head, xyz=[0.04327, 0.0297, -0.000275], rpy=[0,0,0]
+    # Arm camera: parent=link5, xyz=[0.03378, 0, 0.05052], rpy=[0, 0.43633, 0]
+    _HEAD_CAM_OFFSET = _transform_matrix([0.04327, 0.0297, -0.000275], [0, 0, 0])
+    _ARM_CAM_OFFSET = _transform_matrix([0.03378, 0, 0.05052], [0, 0.43633, 0])
+    # Optical frame: Z forward, X right, Y down
+    _OPTICAL_FRAME = _transform_matrix([0, 0, 0], [-math.pi/2, 0, -math.pi/2])
+
+    def _compute_link_transform(self, link_name: str) -> np.ndarray:
+        """Compute world-frame 4x4 transform for a link using current joint state."""
+        # Use the collision checker's FK (it parses the URDF joint chain)
+        return self.collision._compute_link_transform(link_name, self.current_joints)
+
+    def _get_robot_base_transform(self) -> np.ndarray:
+        """Get the robot base transform including position and heading."""
+        T = np.eye(4)
+        c, s = math.cos(self.heading), math.sin(self.heading)
+        T[:3, :3] = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+        T[0, 3] = self.pos_x
+        T[1, 3] = self.pos_y
+        return T
+
+    def get_tag_in_camera_frame(self, camera: str = "HEAD") -> dict[str, float]:
+        """
+        Compute the cube's position relative to the robot base frame.
+        Returns {"x": ..., "y": ..., "z": ...} in base_link coordinates.
+
+        This matches what the real robot's ArUco pipeline outputs after
+        TF transforms the detection from camera frame to base_link frame:
+        - x: forward from robot center (meters)
+        - y: left from robot center (meters)
+        - z: up from ground (meters)
+        """
+        # World position of the cube
+        cube_world = np.array([*self.CUBE_POSITION, 1.0])
+
+        # Transform cube into robot base frame
+        T_base = self._get_robot_base_transform()
+        T_base_inv = np.linalg.inv(T_base)
+        cube_base = T_base_inv @ cube_world
+
+        return {
+            "x": round(float(cube_base[0]), 4),
+            "y": round(float(cube_base[1]), 4),
+            "z": round(float(cube_base[2]), 4),
+        }
+
+    def is_tag_visible(self, camera: str = "HEAD") -> bool:
+        """Check if the cube is within detectable range (< 1 meter)."""
+        tag = self.get_tag_in_camera_frame(camera)
+        dist = math.sqrt(tag["x"]**2 + tag["y"]**2 + tag["z"]**2)
+        # Visible if the cube is in front of the robot and within 1 meter
+        return tag["x"] > 0 and dist < 1.0
 
     # Real home joint positions from the robot
     HOME_JOINTS = {
