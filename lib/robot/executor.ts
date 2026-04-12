@@ -473,21 +473,19 @@ export class BlockExecutor {
       case "mars_tag_detect_arm": {
         const axis = String(block.fields.AXIS || "X");
         this.onLog(`Reading arm tag ${axis}...`);
-        // TODO: subscribe to actual tag detection topic
-        return 0;
+        return await this.robot.getTagPoseArm(axis);
       }
 
       case "mars_tag_detect_head": {
         const axis = String(block.fields.AXIS || "X");
         this.onLog(`Reading head tag ${axis}...`);
-        // TODO: subscribe to actual tag detection topic
-        return 0;
+        return await this.robot.getTagPoseHead(axis);
       }
 
-      case "mars_is_tag_detected":
+      case "mars_is_tag_detected": {
         this.onLog("Checking for tags...");
-        // TODO: subscribe to actual tag detection topic
-        return false;
+        return await this.robot.isTagDetected();
+      }
 
       // ---- Battery & Heading ----
       case "mars_get_battery":

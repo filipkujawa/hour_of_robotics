@@ -589,6 +589,82 @@ export class RobotConnection {
     });
   }
 
+  // ==========================================
+  // Tag Detection (ArUco / AprilTag)
+  // ==========================================
+
+  async getTagPoseArm(axis: string): Promise<number> {
+    if (!this.ros) return 0;
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/aruco/cube_pose",
+        messageType: "geometry_msgs/PoseStamped",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        topic.unsubscribe();
+        const pos = message.pose.position;
+        const val = axis === "X" ? pos.x : axis === "Y" ? pos.y : pos.z;
+        // NaN means no detection
+        resolve(isNaN(val) ? 0 : Math.round(val * 1000) / 1000);
+      };
+
+      topic.subscribe(handler);
+      setTimeout(() => { topic.unsubscribe(); resolve(0); }, 2000);
+    });
+  }
+
+  async getTagPoseHead(axis: string): Promise<number> {
+    if (!this.ros) return 0;
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/aruco_left/cube_pose",
+        messageType: "geometry_msgs/PoseStamped",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        topic.unsubscribe();
+        const pos = message.pose.position;
+        const val = axis === "X" ? pos.x : axis === "Y" ? pos.y : pos.z;
+        resolve(isNaN(val) ? 0 : Math.round(val * 1000) / 1000);
+      };
+
+      topic.subscribe(handler);
+      setTimeout(() => { topic.unsubscribe(); resolve(0); }, 2000);
+    });
+  }
+
+  async isTagDetected(): Promise<boolean> {
+    if (!this.ros) return false;
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/aruco/cube_faces",
+        messageType: "std_msgs/String",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        topic.unsubscribe();
+        // CSV of visible tag IDs — empty string means no detection
+        resolve(typeof message.data === "string" && message.data.trim().length > 0);
+      };
+
+      topic.subscribe(handler);
+      setTimeout(() => { topic.unsubscribe(); resolve(false); }, 2000);
+    });
+  }
+
   async getAvailableSkills(): Promise<string[]> {
     if (!this.ros) return [];
     const roslib = await getRoslib();
