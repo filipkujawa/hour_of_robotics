@@ -77,6 +77,7 @@ export function BlocklyWorkspace({
     status: connectionStatus,
     isRunning,
     logs,
+    armEstopped,
     connect,
     disconnect,
     runWorkspace,
@@ -84,6 +85,9 @@ export function BlocklyWorkspace({
     clearLogs,
     connectionUrl,
     fetchSkills,
+    clearArmFaults,
+    armTorqueOn,
+    armTorqueOff,
   } = useRobot();
 
   const [loadingSkills, setLoadingSkills] = useState(false);
@@ -530,7 +534,16 @@ export function BlocklyWorkspace({
   const renderWidgetContent = (widgetId: WidgetId) => {
     switch (widgetId) {
       case "console":
-        return <RobotConsole logs={logs} onClear={clearLogs} />;
+        return (
+          <RobotConsole
+            logs={logs}
+            armEstopped={armEstopped}
+            onClear={clearLogs}
+            onClearFaults={clearArmFaults}
+            onTorqueOn={armTorqueOn}
+            onTorqueOff={armTorqueOff}
+          />
+        );
       case "rerun":
         return <SimulationViewer url={simulationUrl} version={simVersion} className="h-full" />;
       case "camera":

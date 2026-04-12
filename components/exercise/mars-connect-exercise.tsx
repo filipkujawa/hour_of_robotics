@@ -27,7 +27,19 @@ export function MarsConnectExerciseView({
   const [hasConnected, setHasConnected] = useState(false);
   const [hasTriggeredAction, setHasTriggeredAction] = useState(false);
 
-  const { status, isRunning, logs, connect, disconnect, clearLogs, sayAndSpin } = useRobot();
+  const {
+    status,
+    isRunning,
+    logs,
+    armEstopped,
+    connect,
+    disconnect,
+    clearLogs,
+    sayAndSpin,
+    clearArmFaults,
+    armTorqueOn,
+    armTorqueOff,
+  } = useRobot();
 
   useEffect(() => {
     if (status === "connected") {
@@ -184,7 +196,14 @@ export function MarsConnectExerciseView({
 
             {showConsole && (
               <div className="mt-6 max-w-4xl overflow-hidden rounded-2xl border border-[#e2e1de] bg-white">
-                <RobotConsole logs={logs} onClear={clearLogs} />
+                <RobotConsole
+                  logs={logs}
+                  armEstopped={armEstopped}
+                  onClear={clearLogs}
+                  onClearFaults={clearArmFaults}
+                  onTorqueOn={armTorqueOn}
+                  onTorqueOff={armTorqueOff}
+                />
               </div>
             )}
           </div>

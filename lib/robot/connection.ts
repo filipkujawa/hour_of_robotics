@@ -7,6 +7,7 @@ export interface RobotConnectionOptions {
   onStatusChange?: (status: ConnectionStatus) => void;
   onError?: (error: string) => void;
   onLog?: (message: string) => void;
+  onArmEstopChange?: (estopped: boolean | null) => void;
 }
 
 // Lazy-loaded ROSLIB module (client-only)
@@ -26,6 +27,7 @@ export class RobotConnection {
   private onStatusChange: (status: ConnectionStatus) => void;
   private onError: (error: string) => void;
   private onLog: (message: string) => void;
+  private onArmEstopChange: (estopped: boolean | null) => void;
   private _status: ConnectionStatus = "disconnected";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,14 +47,20 @@ export class RobotConnection {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private armTorqueOnService: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private armRebootService: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private armStateTopic: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private armStatusTopic: any = null;
   private lastArmJoints: number[] | null = null;
+  private lastArmEstop: boolean | null = null;
 
   constructor(options: RobotConnectionOptions = {}) {
     this.url = options.url || DEFAULT_ROBOT_URL;
     this.onStatusChange = options.onStatusChange || (() => {});
     this.onError = options.onError || (() => {});
     this.onLog = options.onLog || (() => {});
+    this.onArmEstopChange = options.onArmEstopChange || (() => {});
   }
 
   get status(): ConnectionStatus {
@@ -110,8 +118,11 @@ export class RobotConnection {
     this.chatInTopic = null;
     this.armTorqueOffService = null;
     this.armTorqueOnService = null;
+    this.armRebootService = null;
     this.armStateTopic = null;
+    this.armStatusTopic = null;
     this.lastArmJoints = null;
+    this.lastArmEstop = null;
   }
 
   private initTopicsAndServices(roslib: typeof import("roslib")) {
@@ -138,6 +149,25 @@ export class RobotConnection {
     this.armStateTopic.subscribe((message: { position?: number[] }) => {
       if (Array.isArray(message?.position)) {
         this.lastArmJoints = message.position.slice(0, 6);
+      }
+    });
+
+    this.armStatusTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/mars/arm/status",
+      messageType: "std_msgs/String",
+    });
+
+    this.armStatusTopic.subscribe((message: Record<string, unknown>) => {
+      const estopped = this.parseArmEstop(message);
+      if (estopped !== this.lastArmEstop) {
+        this.lastArmEstop = estopped;
+        this.onArmEstopChange(estopped);
+        if (estopped === true) {
+          this.onError("Arm estop engaged");
+        } else if (estopped === false) {
+          this.onLog("Arm estop released");
+        }
       }
     });
 
@@ -176,6 +206,30 @@ export class RobotConnection {
       name: "/mars/arm/torque_on",
       serviceType: "std_srvs/Trigger",
     });
+
+    this.armRebootService = new roslib.Service({
+      ros: this.ros,
+      name: "/mars/arm/reboot",
+      serviceType: "std_srvs/Trigger",
+    });
+  }
+
+  private parseArmEstop(message: Record<string, unknown>): boolean | null {
+    if (typeof message.estop === "boolean") return message.estop;
+    if (typeof message.estopped === "boolean") return message.estopped;
+
+    const data = (message as { data?: unknown }).data;
+    if (typeof data === "boolean") return data;
+    if (typeof data === "number") return data !== 0;
+    if (typeof data === "string") {
+      const s = data.toLowerCase();
+      if (s.includes("estop") || s.includes("e-stop")) {
+        if (s.includes("true") || s.includes("on") || s.includes("engaged") || s.includes("1")) return true;
+        if (s.includes("false") || s.includes("off") || s.includes("released") || s.includes("0")) return false;
+      }
+    }
+
+    return null;
   }
 
   // ==========================================
@@ -767,6 +821,18 @@ export class RobotConnection {
         {},
         () => { this.onLog("Arm torque ON — holding position"); resolve(); },
         (err: string) => { this.onError(`Torque on error: ${err}`); reject(new Error(err)); }
+      );
+    });
+  }
+
+  async armReboot(): Promise<void> {
+    if (!this.armRebootService) return;
+
+    return new Promise((resolve, reject) => {
+      this.armRebootService.callService(
+        {},
+        () => { this.onLog("Arm reboot requested — clearing faults"); resolve(); },
+        (err: string) => { this.onError(`Arm reboot error: ${err}`); reject(new Error(err)); }
       );
     });
   }

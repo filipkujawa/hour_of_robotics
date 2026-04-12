@@ -16,6 +16,7 @@ export function useRobot() {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [armEstopped, setArmEstopped] = useState<boolean | null>(null);
   const [connectionUrl, setConnectionUrl] = useState(DEFAULT_ROBOT_URL);
 
   const robotRef = useRef<RobotConnection | null>(null);
@@ -40,6 +41,7 @@ export function useRobot() {
       onStatusChange: setStatus,
       onError: (msg) => addLog(msg, "error"),
       onLog: (msg) => addLog(msg, "info"),
+      onArmEstopChange: setArmEstopped,
     });
 
     setConnectionUrl(resolvedUrl);
@@ -116,10 +118,53 @@ export function useRobot() {
     }
   }, [addLog]);
 
+  const clearArmFaults = useCallback(async () => {
+    if (!robotRef.current) {
+      addLog("Not connected to robot", "error");
+      return;
+    }
+
+    try {
+      await robotRef.current.armReboot();
+      addLog("Clear faults requested (arm reboot)", "success");
+    } catch (err) {
+      addLog(`Clear faults error: ${err instanceof Error ? err.message : String(err)}`, "error");
+    }
+  }, [addLog]);
+
+  const armTorqueOn = useCallback(async () => {
+    if (!robotRef.current) {
+      addLog("Not connected to robot", "error");
+      return;
+    }
+
+    try {
+      await robotRef.current.armTorqueOn();
+      addLog("Arm torque ON", "success");
+    } catch (err) {
+      addLog(`Torque on error: ${err instanceof Error ? err.message : String(err)}`, "error");
+    }
+  }, [addLog]);
+
+  const armTorqueOff = useCallback(async () => {
+    if (!robotRef.current) {
+      addLog("Not connected to robot", "error");
+      return;
+    }
+
+    try {
+      await robotRef.current.armTorqueOff();
+      addLog("Arm torque OFF", "success");
+    } catch (err) {
+      addLog(`Torque off error: ${err instanceof Error ? err.message : String(err)}`, "error");
+    }
+  }, [addLog]);
+
   return {
     status,
     isRunning,
     logs,
+    armEstopped,
     connectionUrl,
     connect,
     disconnect,
@@ -128,5 +173,8 @@ export function useRobot() {
     clearLogs,
     sayAndSpin,
     fetchSkills,
+    clearArmFaults,
+    armTorqueOn,
+    armTorqueOff,
   };
 }
