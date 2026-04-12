@@ -286,28 +286,30 @@ class MarsSimulator:
         T[1, 3] = self.pos_y
         return T
 
+    # Arm base offset from base_link center (joint1 origin in URDF)
+    _ARM_BASE_X = 0.086
+    _ARM_BASE_Y = -0.053
+
     def get_tag_in_camera_frame(self, camera: str = "HEAD") -> dict[str, float]:
         """
-        Compute the cube's position relative to the robot base frame.
-        Returns {"x": ..., "y": ..., "z": ...} in base_link coordinates.
-
-        This matches what the real robot's ArUco pipeline outputs after
-        TF transforms the detection from camera frame to base_link frame:
-        - x: forward from robot center (meters)
-        - y: left from robot center (meters)
+        Compute the cube's position relative to the arm base (front of robot).
+        Returns {"x": ..., "y": ..., "z": ...} where:
+        - x: forward from arm base (meters)
+        - y: left from arm base (meters)
         - z: up from ground (meters)
         """
         # World position of the cube
         cube_world = np.array([*self.CUBE_POSITION, 1.0])
 
-        # Transform cube into robot base frame
+        # Transform cube into robot base_link frame
         T_base = self._get_robot_base_transform()
         T_base_inv = np.linalg.inv(T_base)
         cube_base = T_base_inv @ cube_world
 
+        # Shift origin from base_link center to arm base (front of robot)
         return {
-            "x": round(float(cube_base[0]), 4),
-            "y": round(float(cube_base[1]), 4),
+            "x": round(float(cube_base[0]) - self._ARM_BASE_X, 4),
+            "y": round(float(cube_base[1]) - self._ARM_BASE_Y, 4),
             "z": round(float(cube_base[2]), 4),
         }
 
@@ -385,10 +387,14 @@ class MarsSimulator:
                 )
             )
 
+    # Calibrated from real robot: 9 steps in a row covered 43.25" (1.099m)
+    # ~0.122m/step average. First step is longer (~0.159m) due to accel ramp.
+    METERS_PER_STEP = 0.122
+
     def move_forward(self, steps: float, start_time: float, duration: float = 1.0):
         """Simulates moving forward with interpolation for smoothness."""
         self.add_waypoint()
-        distance = steps * 0.25
+        distance = steps * self.METERS_PER_STEP
         start_x, start_y = self.pos_x, self.pos_y
         target_x = start_x + distance * math.cos(self.heading)
         target_y = start_y + distance * math.sin(self.heading)

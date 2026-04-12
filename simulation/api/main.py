@@ -192,18 +192,20 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
         }, sim_time, duration)
         sim_time += duration
     elif block.type == "mars_arm_move_to":
-        # Fixed block: inputs are in cm
-        x = eval_input_value(sim, block, "X", 0) / 100.0
-        y = eval_input_value(sim, block, "Y", 0) / 100.0
+        # Fixed block: inputs are in cm from arm base (front of robot)
+        # solve_ik expects base_link frame, so add arm base offset
+        x = eval_input_value(sim, block, "X", 0) / 100.0 + 0.086
+        y = eval_input_value(sim, block, "Y", 0) / 100.0 - 0.053
         z = eval_input_value(sim, block, "Z", 20) / 100.0
         duration = 1.0
         joints = sim.solve_ik(x, y, z)
         sim.animate_joints(joints, sim_time, duration)
         sim_time += duration
     elif block.type == "mars_arm_move_to_v":
-        # Variable block: inputs are in meters (e.g. from tag detection)
-        x = eval_input_value(sim, block, "X", 0)
-        y = eval_input_value(sim, block, "Y", 0)
+        # Variable block: values from tag detection are in arm-base frame
+        # Convert to base_link frame for solve_ik
+        x = eval_input_value(sim, block, "X", 0) + 0.086
+        y = eval_input_value(sim, block, "Y", 0) - 0.053
         z = eval_input_value(sim, block, "Z", 0.1)
         duration = 1.0
         joints = sim.solve_ik(x, y, z)

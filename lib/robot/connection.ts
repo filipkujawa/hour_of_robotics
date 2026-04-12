@@ -54,6 +54,15 @@ export class RobotConnection {
   private armStatusTopic: any = null;
   private lastArmJoints: number[] | null = null;
   private lastArmEstop: boolean | null = null;
+  private armStateLastUpdate = 0;
+
+  // Persistent ArUco subscriptions (throttled to 2Hz)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private arucoHeadTopic: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private arucoArmTopic: any = null;
+  private arucoHeadLastUpdate = 0;
+  private arucoArmLastUpdate = 0;
 
   constructor(options: RobotConnectionOptions = {}) {
     this.url = options.url || DEFAULT_ROBOT_URL;
@@ -123,6 +132,10 @@ export class RobotConnection {
     this.armStatusTopic = null;
     this.lastArmJoints = null;
     this.lastArmEstop = null;
+    try { this.arucoHeadTopic?.unsubscribe(); } catch { /* websocket may already be closed */ }
+    this.arucoHeadTopic = null;
+    try { this.arucoArmTopic?.unsubscribe(); } catch { /* websocket may already be closed */ }
+    this.arucoArmTopic = null;
   }
 
   private initTopicsAndServices(roslib: typeof import("roslib")) {
@@ -147,6 +160,11 @@ export class RobotConnection {
     });
 
     this.armStateTopic.subscribe((message: { position?: number[] }) => {
+      // Throttle to 10Hz — arm state publishes at 50-100Hz which floods the websocket
+      // We only need fresh joints for FK when computing arm camera tag transforms
+      const now = Date.now();
+      if (now - this.armStateLastUpdate < 100) return;
+      this.armStateLastUpdate = now;
       if (Array.isArray(message?.position)) {
         this.lastArmJoints = message.position.slice(0, 6);
       }
@@ -212,6 +230,44 @@ export class RobotConnection {
       name: "/mars/arm/reboot",
       serviceType: "std_srvs/Trigger",
     });
+
+    // Persistent ArUco subscriptions — throttled to 2Hz (every 500ms)
+    // throttle_rate tells rosbridge to drop messages server-side, reducing serialization load
+    this.arucoHeadTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/aruco_left/cube_pose",
+      messageType: "geometry_msgs/msg/PoseStamped",
+      throttle_rate: 500,
+      queue_length: 1,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.arucoHeadTopic.subscribe((message: any) => {
+      try {
+        const pos = message?.pose?.position;
+        if (!pos || typeof pos.x !== "number" || typeof pos.y !== "number" || typeof pos.z !== "number") return;
+        if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) return;
+        this.arucoHeadLastUpdate = Date.now();
+        this._processHeadTag(message);
+      } catch { /* drop malformed messages */ }
+    });
+
+    this.arucoArmTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/aruco/cube_pose",
+      messageType: "geometry_msgs/PoseStamped",
+      throttle_rate: 500,
+      queue_length: 1,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.arucoArmTopic.subscribe((message: any) => {
+      try {
+        const pos = message?.pose?.position;
+        if (!pos || typeof pos.x !== "number" || typeof pos.y !== "number" || typeof pos.z !== "number") return;
+        if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) return;
+        this.arucoArmLastUpdate = Date.now();
+        this._processArmTag(message);
+      } catch { /* drop malformed messages */ }
+    });
   }
 
   private parseArmEstop(message: Record<string, unknown>): boolean | null {
@@ -241,10 +297,18 @@ export class RobotConnection {
       this.onError("Not connected");
       return;
     }
+    let angular_offset = 0.15;
+    if (angular == 0) {
+      angular_offset = 0;
+    }
+
+    if (angular > 0) {
+      angular_offset += 0.1;
+    }
 
     this.cmdVelTopic.publish({
       linear: { x: linear, y: 0, z: 0 },
-      angular: { x: 0, y: 0, z: angular },
+      angular: { x: 0, y: 0, z: angular + angular_offset },
     });
   }
 
@@ -741,179 +805,100 @@ export class RobotConnection {
     return T;
   }
 
-  async getTagPoseArm(axis: string): Promise<number> {
-    if (!this.ros) return this.lastTagArm[axis] ?? 0;
-    const roslib = await getRoslib();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private _processArmTag(message: any) {
+    const pos = message?.pose?.position;
+    if (!pos) return;
 
-    return new Promise((resolve) => {
-      const topic = new roslib.Topic({
-        ros: this.ros,
-        name: "/aruco/cube_pose",
-        messageType: "geometry_msgs/PoseStamped",
-      });
+    const cam_x = pos.x, cam_y = pos.y, cam_z = pos.z;
+    const T_cam = this.getArmCameraTransform();
 
-      let resolved = false;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (message: any) => {
-        if (resolved) return;
-        resolved = true;
-        topic.unsubscribe();
-        const pos = message?.pose?.position;
-        if (!pos) { resolve(this.lastTagArm[axis] ?? 0); return; }
+    const bx = T_cam[0][0]*cam_x + T_cam[0][1]*cam_y + T_cam[0][2]*cam_z + T_cam[0][3];
+    const by = T_cam[1][0]*cam_x + T_cam[1][1]*cam_y + T_cam[1][2]*cam_z + T_cam[1][3];
+    const bz = T_cam[2][0]*cam_x + T_cam[2][1]*cam_y + T_cam[2][2]*cam_z + T_cam[2][3];
 
-        // Detection is in arm camera optical frame: x=right, y=down, z=forward
-        const cam_x = pos.x;
-        const cam_y = pos.y;
-        const cam_z = pos.z;
+    // Shift origin from base_link center to arm base (front of robot)
+    const wx = bx - 0.086;
+    const wy = by + 0.053;
+    const wz = bz;
 
-        // Get the camera's world-frame transform via FK
-        const T_cam = this.getArmCameraTransform();
-
-        // Transform the detection point from camera frame to world frame
-        // point_world = T_cam * point_cam
-        const wx = T_cam[0][0]*cam_x + T_cam[0][1]*cam_y + T_cam[0][2]*cam_z + T_cam[0][3];
-        const wy = T_cam[1][0]*cam_x + T_cam[1][1]*cam_y + T_cam[1][2]*cam_z + T_cam[1][3];
-        const wz = T_cam[2][0]*cam_x + T_cam[2][1]*cam_y + T_cam[2][2]*cam_z + T_cam[2][3];
-
-        this.onLog(`Arm tag base_link: x=${wx.toFixed(3)}, y=${wy.toFixed(3)}, z=${wz.toFixed(3)}`);
-
-        // Cache all axes
-        this.lastTagArm["X"] = Math.round(wx * 1000) / 1000;
-        this.lastTagArm["Y"] = Math.round(wy * 1000) / 1000;
-        this.lastTagArm["Z"] = Math.round(wz * 1000) / 1000;
-
-        const val = axis === "X" ? wx : axis === "Y" ? wy : wz;
-        resolve(isNaN(val) ? (this.lastTagArm[axis] ?? 0) : Math.round(val * 1000) / 1000);
-      };
-
-      topic.subscribe(handler);
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          topic.unsubscribe();
-          const last = this.lastTagArm[axis];
-          if (last !== undefined) {
-            this.onLog(`Arm tag timeout — using last known ${axis}=${last}`);
-            resolve(last);
-          } else {
-            this.onLog("Arm tag timeout — no previous detection");
-            resolve(0);
-          }
-        }
-      }, 2000);
-    });
+    this.lastTagArm["X"] = Math.round(wx * 1000) / 1000;
+    this.lastTagArm["Y"] = Math.round(wy * 1000) / 1000;
+    this.lastTagArm["Z"] = Math.round(wz * 1000) / 1000;
   }
 
-  // Last known tag positions — used when detection times out
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private _processHeadTag(message: any) {
+    const pos = message?.pose?.position;
+    if (!pos) return;
+
+    const cam_x = pos.x, cam_y = pos.y, cam_z = pos.z;
+    const tilt = this.headTiltRad;
+
+    // Camera optical → camera link
+    const link_x = cam_z, link_y = -cam_x, link_z = -cam_y;
+
+    // Camera link → head link
+    const head_x = link_x + 0.043;
+    const head_y = link_y + 0.030;
+    const head_z = link_z - 0.0003;
+
+    // Head link → base_link (apply head tilt + head origin)
+    const cos_t = Math.cos(-tilt);
+    const sin_t = Math.sin(-tilt);
+    const base_x = cos_t * head_x + sin_t * head_z + (-0.041);
+    const base_y = head_y + (-0.0002);
+    const base_z = -sin_t * head_x + cos_t * head_z + 0.259;
+
+    // Shift origin from base_link center to arm base (front of robot)
+    const front_x = base_x - 0.086;
+    const front_y = base_y + 0.053;
+    const front_z = base_z;
+
+    this.lastTagHead["X"] = Math.round(front_x * 1000) / 1000;
+    this.lastTagHead["Y"] = Math.round(front_y * 1000) / 1000;
+    this.lastTagHead["Z"] = Math.round(front_z * 1000) / 1000;
+  }
+
+  /**
+   * Read cached arm tag position. The persistent subscription updates the cache at 2Hz.
+   */
+  async getTagPoseArm(axis: string): Promise<number> {
+    const val = this.lastTagArm[axis];
+    if (val !== undefined) {
+      this.onLog(`Arm tag (from arm base): ${axis}=${val}`);
+      return val;
+    }
+    this.onLog("Arm tag — no detection yet");
+    return 0;
+  }
+
+  // Last known tag positions — updated by persistent subscriptions
   private lastTagHead: Record<string, number> = {};
   private lastTagArm: Record<string, number> = {};
 
   // Current head tilt in radians (updated by setHeadTilt)
   private headTiltRad = 0;
 
+  /**
+   * Read cached head tag position. The persistent subscription updates the cache at 2Hz.
+   */
   async getTagPoseHead(axis: string): Promise<number> {
-    if (!this.ros) return 0;
-    const roslib = await getRoslib();
-
-    return new Promise((resolve) => {
-      const topic = new roslib.Topic({
-        ros: this.ros,
-        name: "/aruco_left/cube_pose",
-        messageType: "geometry_msgs/msg/PoseStamped",
-      });
-
-      let resolved = false;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (message: any) => {
-        if (resolved) return;
-        resolved = true;
-        topic.unsubscribe();
-
-        const pos = message?.pose?.position;
-        if (!pos) { resolve(0); return; }
-
-        // Tag is in camera optical frame: x=right, y=down, z=forward
-        const cam_x = pos.x;
-        const cam_y = pos.y;
-        const cam_z = pos.z;
-
-        // Camera is on the head which can tilt.
-        // Head joint: parent=base_link, origin xyz=[-0.041, -0.0002, 0.259], axis=[0,-1,0]
-        // Camera on head: xyz=[0.043, 0.030, -0.0003]
-        // Optical frame: rotated -90 around X, -90 around Z from camera link
-
-        // Head tilt angle (negative Y axis rotation)
-        const tilt = this.headTiltRad;
-
-        // Step 1: Camera optical → camera link (undo optical frame rotation)
-        // optical: x=right, y=down, z=forward → link: x=forward, y=left, z=up
-        const link_x = cam_z;   // optical z (forward) = link x
-        const link_y = -cam_x;  // optical x (right) = link -y
-        const link_z = -cam_y;  // optical y (down) = link -z
-
-        // Step 2: Camera link → head link (add camera offset on head)
-        const head_x = link_x + 0.043;
-        const head_y = link_y + 0.030;
-        const head_z = link_z - 0.0003;
-
-        // Step 3: Head link → base_link (apply head tilt + head origin)
-        // Head tilt rotates around -Y axis
-        const cos_t = Math.cos(-tilt);
-        const sin_t = Math.sin(-tilt);
-        const base_x = cos_t * head_x + sin_t * head_z + (-0.041);
-        const base_y = head_y + (-0.0002);
-        const base_z = -sin_t * head_x + cos_t * head_z + 0.259;
-
-        this.onLog(`Tag base_link: x=${base_x.toFixed(3)}, y=${base_y.toFixed(3)}, z=${base_z.toFixed(3)}`);
-
-        // Cache all axes
-        this.lastTagHead["X"] = Math.round(base_x * 1000) / 1000;
-        this.lastTagHead["Y"] = Math.round(base_y * 1000) / 1000;
-        this.lastTagHead["Z"] = Math.round(base_z * 1000) / 1000;
-
-        const val = axis === "X" ? base_x : axis === "Y" ? base_y : base_z;
-        resolve(isNaN(val) ? 0 : Math.round(val * 1000) / 1000);
-      };
-
-      topic.subscribe(handler);
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          topic.unsubscribe();
-          const last = this.lastTagHead[axis];
-          if (last !== undefined) {
-            this.onLog(`Tag timeout — using last known ${axis}=${last}`);
-            resolve(last);
-          } else {
-            this.onLog("Tag timeout — no previous detection");
-            resolve(0);
-          }
-        }
-      }, 3000);
-    });
+    const val = this.lastTagHead[axis];
+    if (val !== undefined) {
+      this.onLog(`Tag (from arm base): ${axis}=${val}`);
+      return val;
+    }
+    this.onLog("Tag — no detection yet");
+    return 0;
   }
 
   async isTagDetected(): Promise<boolean> {
-    if (!this.ros) return false;
-    const roslib = await getRoslib();
-
-    return new Promise((resolve) => {
-      const topic = new roslib.Topic({
-        ros: this.ros,
-        name: "/aruco/cube_faces",
-        messageType: "std_msgs/String",
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (message: any) => {
-        topic.unsubscribe();
-        // CSV of visible tag IDs — empty string means no detection
-        resolve(typeof message.data === "string" && message.data.trim().length > 0);
-      };
-
-      topic.subscribe(handler);
-      setTimeout(() => { topic.unsubscribe(); resolve(false); }, 2000);
-    });
+    // Check if we have a recent detection from the persistent subscriptions
+    // "Recent" = within the last 2 seconds
+    const headAge = Date.now() - this.arucoHeadLastUpdate;
+    const armAge = Date.now() - this.arucoArmLastUpdate;
+    return headAge < 2000 || armAge < 2000;
   }
 
   async getAvailableSkills(): Promise<string[]> {
