@@ -10,6 +10,8 @@ export interface RobotConnectionOptions {
   onArmEstopChange?: (estopped: boolean | null) => void;
   /** `std_msgs/Float64MultiArray` [linear_m_s, duration_s] — same as `velocity_heading_controller` default */
   driveHeadingCmdTopic?: string;
+  /** `std_msgs/Float64` delta heading in radians — same as `rotate_delta_controller` default */
+  rotateDeltaCmdTopic?: string;
 }
 
 // Lazy-loaded ROSLIB module (client-only)
@@ -38,6 +40,9 @@ export class RobotConnection {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private driveHeadingCmdTopic: any = null;
   private readonly driveHeadingCmdTopicName: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private rotateDeltaCmdTopic: any = null;
+  private readonly rotateDeltaCmdTopicName: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private armService: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,6 +78,7 @@ export class RobotConnection {
     this.onLog = options.onLog || (() => {});
     this.onArmEstopChange = options.onArmEstopChange || (() => {});
     this.driveHeadingCmdTopicName = options.driveHeadingCmdTopic ?? "/mars/drive_heading";
+    this.rotateDeltaCmdTopicName = options.rotateDeltaCmdTopic ?? "/mars/rotate_delta";
   }
 
   get status(): ConnectionStatus {
@@ -130,6 +136,7 @@ export class RobotConnection {
   private cleanup() {
     this.cmdVelTopic = null;
     this.driveHeadingCmdTopic = null;
+    this.rotateDeltaCmdTopic = null;
     this.armService = null;
     this.lightService = null;
     this.headTopic = null;
@@ -157,6 +164,12 @@ export class RobotConnection {
       ros: this.ros,
       name: this.driveHeadingCmdTopicName,
       messageType: "std_msgs/Float64MultiArray",
+    });
+
+    this.rotateDeltaCmdTopic = new roslib.Topic({
+      ros: this.ros,
+      name: this.rotateDeltaCmdTopicName,
+      messageType: "std_msgs/Float64",
     });
 
     this.armService = new roslib.Service({
@@ -310,6 +323,19 @@ export class RobotConnection {
     });
   }
 
+  private publishRotateDelta(deltaThetaRad: number): void {
+    if (!this.rotateDeltaCmdTopic) {
+      this.onError("Not connected");
+      return;
+    }
+    this.rotateDeltaCmdTopic.publish({ data: deltaThetaRad });
+  }
+
+  private cancelRotateDelta(): void {
+    if (!this.rotateDeltaCmdTopic) return;
+    this.rotateDeltaCmdTopic.publish({ data: 0 });
+  }
+
   async moveForward(steps: number): Promise<void> {
     const speed = 0.2;
     const duration = steps * 0.5;
@@ -328,17 +354,19 @@ export class RobotConnection {
 
   async turn(direction: string, degrees: number): Promise<void> {
     this.cancelDriveHeadingSegment();
-    const angularSpeed = direction === "LEFT" ? 0.5 : -0.5;
-    const duration = (degrees / 90) * 1.57;
+    this.cancelRotateDelta();
+    const deltaThetaRad = (direction === "LEFT" ? 1 : -1) * (degrees * Math.PI / 180);
+    const duration = Math.max(0.5, Math.abs(deltaThetaRad) / 0.9 + 0.6);
     this.onLog(`Turning ${direction.toLowerCase()} ${degrees}deg`);
-    this.publishVelocity(0, angularSpeed);
+    this.publishRotateDelta(deltaThetaRad);
     await this.sleep(duration * 1000);
-    this.publishVelocity(0, 0);
+    this.cancelRotateDelta();
   }
 
   stop() {
     this.onLog("Stopping");
     this.cancelDriveHeadingSegment();
+    this.cancelRotateDelta();
     this.publishVelocity(0, 0);
   }
 
