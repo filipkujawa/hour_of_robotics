@@ -699,9 +699,14 @@ export class BlockExecutor {
         return await this.robot.getTagPoseHead(axis);
       }
 
-      case "mars_is_tag_detected": {
-        this.onLog("Checking for tags...");
-        return await this.robot.isTagDetected();
+      case "mars_is_tag_detected_arm": {
+        this.onLog("Checking arm camera for tag...");
+        return await this.robot.isTagDetectedArm();
+      }
+
+      case "mars_is_tag_detected_head": {
+        this.onLog("Checking head camera for tag...");
+        return await this.robot.isTagDetectedHead();
       }
 
       // ---- Battery & Heading ----

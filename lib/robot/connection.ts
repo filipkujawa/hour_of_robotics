@@ -1003,29 +1003,49 @@ export class RobotConnection {
     });
   }
 
-  async isTagDetected(): Promise<boolean> {
-    // Check if we have a recent detection (within last 5 seconds)
-    const headAge = Date.now() - this.arucoHeadLastUpdate;
-    const armAge = Date.now() - this.arucoArmLastUpdate;
-    if (headAge < 5000 || armAge < 5000) return true;
-
-    // No recent cache — do a quick on-demand check
+  async isTagDetectedArm(): Promise<boolean> {
+    if (Date.now() - this.arucoArmLastUpdate < 5000) return true;
     if (!this.ros) return false;
     const roslib = await getRoslib();
     return new Promise((resolve) => {
       const topic = new roslib.Topic({
         ros: this.ros,
-        name: "/aruco/cube_faces",
-        messageType: "std_msgs/String",
+        name: "/aruco/detected",
+        messageType: "std_msgs/Bool",
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handler = (message: any) => {
         try { topic.unsubscribe(); } catch { /* */ }
-        resolve(typeof message.data === "string" && message.data.trim().length > 0);
+        resolve(message.data === true);
       };
       topic.subscribe(handler);
       setTimeout(() => { try { topic.unsubscribe(); } catch { /* */ } resolve(false); }, 2000);
     });
+  }
+
+  async isTagDetectedHead(): Promise<boolean> {
+    if (Date.now() - this.arucoHeadLastUpdate < 5000) return true;
+    if (!this.ros) return false;
+    const roslib = await getRoslib();
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/aruco_left/detected",
+        messageType: "std_msgs/Bool",
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        try { topic.unsubscribe(); } catch { /* */ }
+        resolve(message.data === true);
+      };
+      topic.subscribe(handler);
+      setTimeout(() => { try { topic.unsubscribe(); } catch { /* */ } resolve(false); }, 2000);
+    });
+  }
+
+  async isTagDetected(): Promise<boolean> {
+    const [arm, head] = await Promise.all([this.isTagDetectedArm(), this.isTagDetectedHead()]);
+    return arm || head;
   }
 
   async getAvailableSkills(): Promise<string[]> {

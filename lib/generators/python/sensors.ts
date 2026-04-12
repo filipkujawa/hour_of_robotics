@@ -33,8 +33,12 @@ export function registerSensorGenerators() {
     return [`mars.tag_detect_head("${axis.toLowerCase()}")`, Order.FUNCTION_CALL];
   };
 
-  pythonGenerator.forBlock["mars_is_tag_detected"] = function () {
-    return ["mars.is_tag_detected()", Order.FUNCTION_CALL];
+  pythonGenerator.forBlock["mars_is_tag_detected_arm"] = function () {
+    return ["mars.is_tag_detected_arm()", Order.FUNCTION_CALL];
+  };
+
+  pythonGenerator.forBlock["mars_is_tag_detected_head"] = function () {
+    return ["mars.is_tag_detected_head()", Order.FUNCTION_CALL];
   };
 
   pythonGenerator.forBlock["mars_get_battery"] = function () {
