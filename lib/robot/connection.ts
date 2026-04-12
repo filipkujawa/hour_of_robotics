@@ -489,12 +489,24 @@ export class RobotConnection {
     const clamped = Math.max(0, Math.min(100, Math.round(percent)));
     this.onLog(`Volume -> ${clamped}%`);
 
+    // Try both topic (Int32) and service (SetBool) — robot may use either
     const topic = new roslib.Topic({
       ros: this.ros,
       name: "/set_volume",
       messageType: "std_msgs/Int32",
     });
     topic.publish({ data: clamped });
+
+    const service = new roslib.Service({
+      ros: this.ros,
+      name: "/set_volume",
+      serviceType: "std_srvs/SetBool",
+    });
+    service.callService(
+      { data: clamped > 0 },
+      () => {},
+      () => {},
+    );
   }
 
   // ==========================================
