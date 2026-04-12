@@ -142,7 +142,7 @@ function subscribeToFeed(
     ros,
     name: feed.topic,
     messageType,
-    throttle_rate: 125,
+    throttle_rate: 200,
     queue_length: 1,
   });
 

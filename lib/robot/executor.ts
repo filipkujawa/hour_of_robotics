@@ -165,30 +165,25 @@ export class BlockExecutor {
         break;
 
       case "mars_arm_move_to": {
-        const x = (Number(block.fields.X) || 0) / 100;
-        const y = (Number(block.fields.Y) || 0) / 100;
-        const rawZ = (Number(block.fields.Z) || 20) / 100;
-        // Clamp Z: arm base is ~4cm off ground, min safe reach is ~8cm
-        const z = Math.max(0.08, rawZ);
-        if (rawZ < 0.08) this.onLog(`Z clamped from ${(rawZ * 100).toFixed(1)}cm to 8cm (min safe height)`);
-        // pitch=-1.5708 keeps gripper pointing straight down (flat pick)
-        await this.robot.executeSkill("innate-os/arm_move_to_xyz", {
-          x, y, z, roll: 0, pitch: -1.5708, yaw: 0,
-        });
+        // User inputs are in cm from the arm base (front of robot)
+        // Skill server expects base_link frame, so add arm base offset
+        const x = (Number(block.fields.X) || 0) / 100 + 0.086;
+        const y = (Number(block.fields.Y) || 0) / 100 - 0.053;
+        const z = (Number(block.fields.Z) || 20) / 100;
+        await this.robot.executeSkill("innate-os/arm_move_to_xyz", { x, y, z });
         break;
       }
 
       case "mars_arm_move_to_v": {
-        const x = Number(await this.evaluateValue(block.inputs.X || null)) || 0;
-        const y = Number(await this.evaluateValue(block.inputs.Y || null)) || 0;
+        // Tag values are already in arm-base frame, convert to base_link for skill server
+        const rawX = Number(await this.evaluateValue(block.inputs.X || null)) || 0;
+        const rawY = Number(await this.evaluateValue(block.inputs.Y || null)) || 0;
         const rawZ = Number(await this.evaluateValue(block.inputs.Z || null)) || 0.1;
-        // Clamp Z: arm base is ~4cm off ground, min safe reach is ~8cm
-        const z = Math.max(0.08, rawZ);
-        if (rawZ < 0.08) this.onLog(`Z clamped from ${rawZ.toFixed(3)}m to 0.08m (min safe height)`);
-        // pitch=-1.5708 keeps gripper pointing straight down (flat pick)
-        await this.robot.executeSkill("innate-os/arm_move_to_xyz", {
-          x, y, z, roll: 0, pitch: -1.5708, yaw: 0,
-        });
+        const x = rawX + 0.086;
+        const y = rawY - 0.053;
+        const z = Math.max(0.05, rawZ);
+        if (rawZ < 0.05) this.onLog(`Z clamped from ${rawZ.toFixed(3)} to 0.05m (min safe height)`);
+        await this.robot.executeSkill("innate-os/arm_move_to_xyz", { x, y, z });
         break;
       }
 
