@@ -340,6 +340,161 @@ export class BlockExecutor {
         break;
       }
 
+      // ---- Wait until ----
+      case "mars_wait_until": {
+        const maxWait = 300; // 5 minutes max
+        let waited = 0;
+        this.onLog("Waiting for condition...");
+        while (this.running && waited < maxWait) {
+          const cond = await this.evaluateValue(block.inputs.CONDITION || null);
+          if (cond) break;
+          await new Promise((r) => setTimeout(r, 500));
+          waited += 0.5;
+        }
+        this.onLog("Condition met");
+        break;
+      }
+
+      // ---- Forever loop ----
+      case "mars_forever": {
+        const body = block.inputs.DO;
+        let iter = 0;
+        while (this.running) {
+          iter++;
+          this.onLog(`Forever loop iteration ${iter}`);
+          if (body) await this.executeChain(body);
+        }
+        break;
+      }
+
+      // ---- Event blocks ----
+      case "mars_when_condition": {
+        this.onLog("Waiting for condition...");
+        let w = 0;
+        while (this.running && w < 300) {
+          const c = await this.evaluateValue(block.inputs.CONDITION || null);
+          if (c) break;
+          await new Promise((r) => setTimeout(r, 500));
+          w += 0.5;
+        }
+        if (this.running) {
+          this.onLog("Condition triggered!");
+          const body = block.inputs.DO;
+          if (body) await this.executeChain(body);
+        }
+        break;
+      }
+
+      case "mars_when_distance": {
+        const threshold = Number(block.fields.THRESHOLD) || 30;
+        this.onLog(`Waiting for distance < ${threshold}cm...`);
+        while (this.running) {
+          const dist = await this.robot.getDistance();
+          if (dist > 0 && dist < threshold) break;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        if (this.running) {
+          this.onLog("Object detected nearby!");
+          const body = block.inputs.DO;
+          if (body) await this.executeChain(body);
+        }
+        break;
+      }
+
+      case "mars_when_tag": {
+        this.onLog("Waiting for tag detection...");
+        while (this.running) {
+          const detected = await this.robot.isTagDetected();
+          if (detected) break;
+          await new Promise((r) => setTimeout(r, 500));
+        }
+        if (this.running) {
+          this.onLog("Tag detected!");
+          const body = block.inputs.DO;
+          if (body) await this.executeChain(body);
+        }
+        break;
+      }
+
+      // ---- Sensor store blocks ----
+      case "mars_read_distance": {
+        const dist = await this.robot.getDistance();
+        this.onLog(`Distance: ${dist}cm`);
+        // Store in executor context — the variable system handles this via Blockly
+        break;
+      }
+
+      case "mars_read_heading": {
+        const hdg = await this.robot.getHeading();
+        this.onLog(`Heading: ${hdg}°`);
+        break;
+      }
+
+      case "mars_read_battery": {
+        const bat = await this.robot.getBattery();
+        this.onLog(`Battery: ${bat}%`);
+        break;
+      }
+
+      case "mars_read_tag": {
+        const cam = String(block.fields.CAMERA || "ARM");
+        const axis = String(block.fields.AXIS || "X");
+        const val = cam === "ARM"
+          ? await this.robot.getTagPoseArm(axis)
+          : await this.robot.getTagPoseHead(axis);
+        this.onLog(`Tag ${cam} ${axis}: ${val}`);
+        break;
+      }
+
+      // ---- Drive meters ----
+      case "mars_drive_meters": {
+        const dir = String(block.fields.DIRECTION || "FORWARD");
+        const meters = Number(block.fields.METERS) || 0.5;
+        const steps = meters / 0.125; // ~12.5cm per step
+        this.onLog(`Driving ${dir.toLowerCase()} ${meters}m`);
+        if (dir === "FORWARD") {
+          await this.robot.moveForward(steps);
+        } else {
+          await this.robot.moveBackward(steps);
+        }
+        break;
+      }
+
+      case "mars_drive_meters_v": {
+        const dir = String(block.fields.DIRECTION || "FORWARD");
+        const meters = Number(await this.evaluateValue(block.inputs.METERS || null)) || 0.5;
+        const steps = meters / 0.125;
+        this.onLog(`Driving ${dir.toLowerCase()} ${meters}m`);
+        if (dir === "FORWARD") {
+          await this.robot.moveForward(steps);
+        } else {
+          await this.robot.moveBackward(steps);
+        }
+        break;
+      }
+
+      // ---- Save/go to position ----
+      case "mars_save_position": {
+        const name = String(block.fields.NAME || "home");
+        this.onLog(`Saving position as "${name}"`);
+        await this.robot.executeSkill("innate-os/record_position", { corner: name });
+        break;
+      }
+
+      case "mars_go_to_position": {
+        const name = String(block.fields.NAME || "home");
+        this.onLog(`Going to position "${name}"`);
+        await this.robot.executeSkill("innate-os/navigate_to_position", { x: 0, y: 0, theta: 0, local_frame: false });
+        break;
+      }
+
+      case "mars_drive_to": {
+        const instruction = String(block.fields.INSTRUCTION || "");
+        this.onLog(`Driving to: "${instruction}"`);
+        await this.robot.executeSkill("innate-os/navigate_with_vision", { instruction });
+        break;
+      }
+
       // ---- Built-in Logic (Blockly standard) ----
       case "controls_if":
         await this.executeIf(block);

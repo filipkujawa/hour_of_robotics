@@ -37,6 +37,19 @@ export function registerMovementGenerators() {
     return "mars.stop()\n";
   };
 
+  pythonGenerator.forBlock["mars_drive_meters"] = function (block) {
+    const dir = block.getFieldValue("DIRECTION");
+    const meters = block.getFieldValue("METERS");
+    return `mars.drive(${dir === "BACKWARD" ? -meters : meters})\n`;
+  };
+
+  pythonGenerator.forBlock["mars_drive_meters_v"] = function (block, generator) {
+    const dir = block.getFieldValue("DIRECTION");
+    const meters = generator.valueToCode(block, "METERS", Order.NONE) || "0.5";
+    const sign = dir === "BACKWARD" ? "-" : "";
+    return `mars.drive(${sign}${meters})\n`;
+  };
+
   pythonGenerator.forBlock["mars_set_speed"] = function (block) {
     const speed = block.getFieldValue("SPEED");
     return `mars.set_speed(${speed})\n`;

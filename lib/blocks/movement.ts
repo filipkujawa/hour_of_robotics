@@ -81,6 +81,44 @@ const movementBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Turn — plug in a variable or expression for degrees",
   },
   {
+    type: "mars_drive_meters",
+    message0: "drive %1 %2 meters",
+    args0: [
+      {
+        type: "field_dropdown",
+        name: "DIRECTION",
+        options: [
+          ["forward", "FORWARD"],
+          ["backward", "BACKWARD"],
+        ],
+      },
+      { type: "field_number", name: "METERS", value: 0.5, min: 0, max: 10 },
+    ],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#00b894",
+    tooltip: "Drive a specific distance in meters",
+  },
+  {
+    type: "mars_drive_meters_v",
+    message0: "drive %1 %2 meters",
+    args0: [
+      {
+        type: "field_dropdown",
+        name: "DIRECTION",
+        options: [
+          ["forward", "FORWARD"],
+          ["backward", "BACKWARD"],
+        ],
+      },
+      { type: "input_value", name: "METERS", check: "Number" },
+    ],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#00b894",
+    tooltip: "Drive a distance — plug in a variable for meters",
+  },
+  {
     type: "mars_stop",
     message0: "stop moving",
     previousStatement: null,

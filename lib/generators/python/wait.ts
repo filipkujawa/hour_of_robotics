@@ -34,4 +34,49 @@ export function registerWaitGenerators() {
       generator.valueToCode(block, "CONDITION", Order.NONE) || "False";
     return `mars.wait_until(lambda: ${condition})\n`;
   };
+
+  pythonGenerator.forBlock["mars_forever"] = function (block, generator) {
+    const body = generator.statementToCode(block, "DO") || "  pass\n";
+    return `while True:\n${body}`;
+  };
+
+  pythonGenerator.forBlock["mars_when_condition"] = function (block, generator) {
+    const condition = generator.valueToCode(block, "CONDITION", Order.NONE) || "False";
+    const body = generator.statementToCode(block, "DO") || "  pass\n";
+    return `mars.wait_until(lambda: ${condition})\n${body}`;
+  };
+
+  pythonGenerator.forBlock["mars_when_distance"] = function (block, generator) {
+    const threshold = block.getFieldValue("THRESHOLD");
+    const body = generator.statementToCode(block, "DO") || "  pass\n";
+    return `mars.wait_until(lambda: mars.get_distance() < ${threshold})\n${body}`;
+  };
+
+  pythonGenerator.forBlock["mars_when_tag"] = function (block, generator) {
+    const body = generator.statementToCode(block, "DO") || "  pass\n";
+    return `mars.wait_until(lambda: mars.is_tag_detected())\n${body}`;
+  };
+
+  pythonGenerator.forBlock["mars_read_distance"] = function (block) {
+    const v = pythonGenerator.getVariableName(block.getFieldValue("VAR"));
+    return `${v} = mars.get_distance()\n`;
+  };
+
+  pythonGenerator.forBlock["mars_read_heading"] = function (block) {
+    const v = pythonGenerator.getVariableName(block.getFieldValue("VAR"));
+    return `${v} = mars.get_heading()\n`;
+  };
+
+  pythonGenerator.forBlock["mars_read_battery"] = function (block) {
+    const v = pythonGenerator.getVariableName(block.getFieldValue("VAR"));
+    return `${v} = mars.get_battery()\n`;
+  };
+
+  pythonGenerator.forBlock["mars_read_tag"] = function (block) {
+    const camera = block.getFieldValue("CAMERA");
+    const axis = block.getFieldValue("AXIS");
+    const v = pythonGenerator.getVariableName(block.getFieldValue("VAR"));
+    const fn = camera === "ARM" ? "tag_detect_arm" : "tag_detect_head";
+    return `${v} = mars.${fn}("${axis.toLowerCase()}")\n`;
+  };
 }

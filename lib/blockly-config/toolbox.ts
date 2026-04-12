@@ -12,6 +12,8 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_move_backward_v" },
         { kind: "block", type: "mars_turn" },
         { kind: "block", type: "mars_turn_v" },
+        { kind: "block", type: "mars_drive_meters" },
+        { kind: "block", type: "mars_drive_meters_v" },
         { kind: "block", type: "mars_stop" },
         { kind: "block", type: "mars_set_speed" },
       ],
@@ -23,6 +25,9 @@ export const toolboxConfig = {
       contents: [
         { kind: "block", type: "mars_navigate_to" },
         { kind: "block", type: "mars_spin" },
+        { kind: "block", type: "mars_save_position" },
+        { kind: "block", type: "mars_go_to_position" },
+        { kind: "block", type: "mars_drive_to" },
       ],
     },
     {
@@ -56,6 +61,11 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_is_tag_detected" },
         { kind: "block", type: "mars_get_battery" },
         { kind: "block", type: "mars_get_heading" },
+        { kind: "label", text: "Store sensor values:" },
+        { kind: "block", type: "mars_read_distance" },
+        { kind: "block", type: "mars_read_heading" },
+        { kind: "block", type: "mars_read_battery" },
+        { kind: "block", type: "mars_read_tag" },
       ],
     },
     {
@@ -109,6 +119,18 @@ export const toolboxConfig = {
     },
     {
       kind: "category",
+      name: "Events",
+      colour: "#6c5ce7",
+      contents: [
+        { kind: "block", type: "mars_when_condition" },
+        { kind: "block", type: "mars_when_distance" },
+        { kind: "block", type: "mars_when_tag" },
+        { kind: "block", type: "mars_forever" },
+        { kind: "block", type: "mars_wait_until" },
+      ],
+    },
+    {
+      kind: "category",
       name: "Utilities",
       colour: "#636e72",
       contents: [
@@ -116,7 +138,6 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_abs" },
         { kind: "block", type: "mars_random" },
         { kind: "block", type: "mars_wait" },
-        { kind: "block", type: "mars_wait_until" },
         {
           kind: "block",
           type: "mars_print",
