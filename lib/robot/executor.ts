@@ -620,14 +620,23 @@ export class BlockExecutor {
   // ---- Control flow ----
 
   private async executeIf(block: BlockData): Promise<void> {
-    const condition = await this.evaluateValue(block.inputs.IF0 || null);
-    if (condition) {
-      const doBlock = block.inputs.DO0;
-      if (doBlock) await this.executeChain(doBlock);
-    } else {
-      const elseBlock = block.inputs.ELSE;
-      if (elseBlock) await this.executeChain(elseBlock);
+    // Check IF0, IF1, IF2, ... (elseif branches)
+    for (let i = 0; i < 20; i++) {
+      const condKey = `IF${i}`;
+      const doKey = `DO${i}`;
+      if (!(condKey in block.inputs)) break;
+
+      const condition = await this.evaluateValue(block.inputs[condKey] || null);
+      if (condition) {
+        const doBlock = block.inputs[doKey];
+        if (doBlock) await this.executeChain(doBlock);
+        return;
+      }
     }
+
+    // No condition matched — run ELSE if it exists
+    const elseBlock = block.inputs.ELSE;
+    if (elseBlock) await this.executeChain(elseBlock);
   }
 
   private async executeRepeat(block: BlockData): Promise<void> {

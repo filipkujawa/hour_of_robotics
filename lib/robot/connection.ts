@@ -560,7 +560,9 @@ export class RobotConnection {
         const parsed = this.parseChatEnvelope(msg?.data);
         if (!parsed) return;
         if (parsed.sender && parsed.sender !== "user") return;
-        if (typeof parsed.timestamp === "number" && parsed.timestamp < listenStartedAtSec) return;
+        // Skip messages older than 5 seconds before listen started
+        // (generous window to handle clock skew between Mac and robot)
+        if (typeof parsed.timestamp === "number" && parsed.timestamp < listenStartedAtSec - 5) return;
         if (!parsed.text) return;
         finish(parsed.text);
       };
@@ -880,18 +882,18 @@ export class RobotConnection {
       const topic = new roslib.Topic({
         ros: this.ros,
         name: "/battery_state",
-        messageType: "sensor_msgs/BatteryState",
+        messageType: "sensor_msgs/msg/BatteryState",
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handler = (message: any) => {
-        topic.unsubscribe();
+        try { topic.unsubscribe(); } catch { /* */ }
         const pct = Math.round((message.percentage ?? 0) * 100);
         resolve(pct);
       };
 
       topic.subscribe(handler);
-      setTimeout(() => { topic.unsubscribe(); resolve(-1); }, 2000);
+      setTimeout(() => { try { topic.unsubscribe(); } catch { /* */ } resolve(-1); }, 5000);
     });
   }
 
