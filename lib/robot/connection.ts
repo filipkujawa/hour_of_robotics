@@ -65,6 +65,7 @@ export class RobotConnection {
   private armStatusTopic: any = null;
   private lastArmJoints: number[] | null = null;
   private lastArmEstop: boolean | null = null;
+  private armTorqueOffRequestedForEstop = false;
   private armStateLastUpdate = 0;
 
   // Timestamps of last successful ArUco detection (for isTagDetected cache)
@@ -149,6 +150,7 @@ export class RobotConnection {
     this.armStatusTopic = null;
     this.lastArmJoints = null;
     this.lastArmEstop = null;
+    this.armTorqueOffRequestedForEstop = false;
   }
 
   private initTopicsAndServices(roslib: typeof import("roslib")) {
@@ -198,20 +200,11 @@ export class RobotConnection {
     this.armStatusTopic = new roslib.Topic({
       ros: this.ros,
       name: "/mars/arm/status",
-      messageType: "std_msgs/String",
+      messageType: "maurice_msgs/ArmStatus",
     });
 
     this.armStatusTopic.subscribe((message: Record<string, unknown>) => {
-      const estopped = this.parseArmEstop(message);
-      if (estopped !== this.lastArmEstop) {
-        this.lastArmEstop = estopped;
-        this.onArmEstopChange(estopped);
-        if (estopped === true) {
-          this.onError("Arm estop engaged");
-        } else if (estopped === false) {
-          this.onLog("Arm estop released");
-        }
-      }
+      this.handleArmStatus(message);
     });
 
     this.headTopic = new roslib.Topic({
@@ -277,6 +270,41 @@ export class RobotConnection {
     }
 
     return null;
+  }
+
+  private handleArmStatus(message: Record<string, unknown>) {
+    const isOk = typeof message.is_ok === "boolean" ? message.is_ok : null;
+    const error = typeof message.error === "string" ? message.error : "";
+
+    if (isOk === null) return;
+
+    this.handleArmEstopUpdate(!isOk);
+
+    if (!isOk && error) {
+      this.onError(`Arm status fault: ${error}`);
+    }
+  }
+
+  private handleArmEstopUpdate(estopped: boolean | null) {
+    if (estopped === null) return;
+    if (estopped === this.lastArmEstop) return;
+
+    this.lastArmEstop = estopped;
+    this.onArmEstopChange(estopped);
+
+    if (estopped) {
+      this.onError("Arm estop engaged");
+      if (!this.armTorqueOffRequestedForEstop) {
+        this.armTorqueOffRequestedForEstop = true;
+        void this.armTorqueOff(true).catch(() => {
+          this.armTorqueOffRequestedForEstop = false;
+        });
+      }
+      return;
+    }
+
+    this.armTorqueOffRequestedForEstop = false;
+    this.onLog("Arm estop released");
   }
 
   // ==========================================
@@ -1107,13 +1135,16 @@ export class RobotConnection {
   // Arm (torque)
   // ==========================================
 
-  async armTorqueOff(): Promise<void> {
+  async armTorqueOff(fromEstop = false): Promise<void> {
     if (!this.armTorqueOffService) return;
 
     return new Promise((resolve, reject) => {
       this.armTorqueOffService.callService(
         {},
-        () => { this.onLog("Arm torque OFF — freedrive enabled"); resolve(); },
+        () => {
+          this.onLog(fromEstop ? "Arm torque OFF due to estop" : "Arm torque OFF — freedrive enabled");
+          resolve();
+        },
         (err: string) => { this.onError(`Torque off error: ${err}`); reject(new Error(err)); }
       );
     });
