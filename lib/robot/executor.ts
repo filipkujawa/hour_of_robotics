@@ -144,9 +144,11 @@ export class BlockExecutor {
       }
 
       case "mars_turn_v": {
-        const dir = String(block.fields.DIRECTION || "LEFT");
         const deg = Number(await this.evaluateValue(block.inputs.DEGREES || null)) || 90;
-        await this.robot.turn(dir, deg);
+        // If degrees is negative, turn right; if positive, turn left
+        // This lets the "angle to tag" block drive direction automatically
+        const dir = deg >= 0 ? "LEFT" : "RIGHT";
+        await this.robot.turn(dir, Math.abs(deg));
         break;
       }
 

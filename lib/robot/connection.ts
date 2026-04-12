@@ -150,6 +150,7 @@ export class RobotConnection {
     this.armStatusTopic = null;
     this.lastArmJoints = null;
     this.lastArmEstop = null;
+    this.stopGripperHold();
     this.armTorqueOffRequestedForEstop = false;
   }
 
@@ -395,6 +396,7 @@ export class RobotConnection {
     this.onLog("Stopping");
     this.cancelDriveHeadingSegment();
     this.cancelRotateDelta();
+    this.stopGripperHold();
     this.publishVelocity(0, 0);
   }
 
@@ -404,6 +406,7 @@ export class RobotConnection {
 
   async armGoToJoints(joints: number[], durationSeconds = 2.0): Promise<void> {
     if (!this.armService) return;
+    this.stopGripperHold();
 
     const jointTargets = joints.length > 6 ? joints.slice(0, 6) : joints;
     if (jointTargets.length !== 6) {
@@ -437,6 +440,32 @@ export class RobotConnection {
     return this.executeSkill("innate-os/wave", {});
   }
 
+  // Gripper hold loop — keeps re-sending the gripper command so the servo
+  // doesn't give up. Runs every 500ms until the next gripper action cancels it.
+  private gripperHoldInterval: ReturnType<typeof setInterval> | null = null;
+
+  private stopGripperHold() {
+    if (this.gripperHoldInterval) {
+      clearInterval(this.gripperHoldInterval);
+      this.gripperHoldInterval = null;
+    }
+  }
+
+  private startGripperHold(targetJ6: number) {
+    this.stopGripperHold();
+    this.gripperHoldInterval = setInterval(() => {
+      if (!this.lastArmJoints || !this.armService) return;
+      const joints = [...this.lastArmJoints];
+      joints[5] = targetJ6;
+      // Fire-and-forget — don't await, just keep nudging
+      this.armService.callService(
+        { data: { data: joints }, time: 0.3 },
+        () => {},
+        () => {},
+      );
+    }, 500);
+  }
+
   async gripperOpen(): Promise<void> {
     this.onLog("Gripper open");
     if (!this.lastArmJoints) {
@@ -444,8 +473,9 @@ export class RobotConnection {
       return;
     }
     const joints = [...this.lastArmJoints];
-    joints[5] = 0.85; // GRIPPER_OPEN from manipulation_interface
-    return this.armGoToJoints(joints, 0.5);
+    joints[5] = 0.85; // GRIPPER_OPEN
+    await this.armGoToJoints(joints, 0.5);
+    this.startGripperHold(0.85);
   }
 
   async gripperClose(): Promise<void> {
@@ -455,8 +485,9 @@ export class RobotConnection {
       return;
     }
     const joints = [...this.lastArmJoints];
-    joints[5] = 0.0; // GRIPPER_CLOSED from manipulation_interface
-    return this.armGoToJoints(joints, 0.5);
+    joints[5] = 0.0; // GRIPPER_CLOSED
+    await this.armGoToJoints(joints, 0.5);
+    this.startGripperHold(0.0);
   }
 
   async pickUp(): Promise<void> {
