@@ -261,6 +261,21 @@ export class BlockExecutor {
         await this.robot.pickUp();
         break;
 
+      // ---- Vision AI ----
+      case "mars_vision_find": {
+        const prompt = String(block.fields.PROMPT || "person");
+        this.onLog(`Vision: looking for "${prompt}"`);
+        await this.visionFind(prompt);
+        break;
+      }
+
+      case "mars_vision_find_v": {
+        const prompt = String(await this.evaluateValue(block.inputs.PROMPT || null) || "person");
+        this.onLog(`Vision: looking for "${prompt}"`);
+        await this.visionFind(prompt);
+        break;
+      }
+
       case "mars_arm_torque_off":
         await this.robot.armTorqueOff();
         break;
@@ -556,6 +571,26 @@ export class BlockExecutor {
         await this.executeWhileUntil(block);
         break;
 
+      case "controls_for": {
+        const varName = String(block.fields.VAR || "i");
+        const from = Number(await this.evaluateValue(block.inputs.FROM || null)) || 0;
+        const to = Number(await this.evaluateValue(block.inputs.TO || null)) || 0;
+        const by = Math.abs(Number(await this.evaluateValue(block.inputs.BY || null)) || 1);
+        const body = block.inputs.DO;
+        if (from <= to) {
+          for (let i = from; i <= to && this.running; i += by) {
+            this.variables[varName] = i;
+            if (body) await this.executeChain(body);
+          }
+        } else {
+          for (let i = from; i >= to && this.running; i -= by) {
+            this.variables[varName] = i;
+            if (body) await this.executeChain(body);
+          }
+        }
+        break;
+      }
+
       // ---- hour_of_robotics custom logic blocks ----
       case "mars_repeat": {
         const count = Number(block.fields.COUNT) || 2;
@@ -776,6 +811,22 @@ export class BlockExecutor {
         return angleDeg;
       }
 
+      // ---- Vision AI ----
+      case "mars_vision_detected": {
+        const status = await this.visionStatus();
+        return status.detected;
+      }
+
+      case "mars_vision_angle": {
+        const status = await this.visionStatus();
+        return status.angle;
+      }
+
+      case "mars_vision_distance": {
+        const status = await this.visionStatus();
+        return status.distance_cm;
+      }
+
       // ---- Battery & Heading ----
       case "mars_get_battery":
         return await this.robot.getBattery();
@@ -797,5 +848,35 @@ export class BlockExecutor {
   private async evaluateNumber(block: BlockData | null): Promise<number> {
     const val = await this.evaluateValue(block);
     return Number(val) || 0;
+  }
+
+  // ==========================================
+  // Vision AI helpers (calls the local vision server on your Mac)
+  // ==========================================
+
+  private static VISION_URL = "http://localhost:8910";
+
+  private async visionFind(prompt: string): Promise<void> {
+    try {
+      const res = await fetch(`${BlockExecutor.VISION_URL}/find`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      this.onLog(`Vision: now tracking "${prompt}"`);
+    } catch (e) {
+      this.onLog(`Vision server not reachable (is it running on localhost:8910?)`);
+    }
+  }
+
+  private async visionStatus(): Promise<{ detected: boolean; angle: number; distance_cm: number }> {
+    try {
+      const res = await fetch(`${BlockExecutor.VISION_URL}/status`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch {
+      return { detected: false, angle: 0, distance_cm: 0 };
+    }
   }
 }

@@ -7,6 +7,7 @@ import { registerWaitGenerators } from "./wait";
 import { registerHeadGenerators } from "./head";
 import { registerNavigationGenerators } from "./navigation";
 import { registerChatGenerators } from "./chat";
+import { registerVisionGenerators } from "./vision";
 
 export function registerAllGenerators() {
   registerMovementGenerators();
@@ -18,4 +19,5 @@ export function registerAllGenerators() {
   registerHeadGenerators();
   registerNavigationGenerators();
   registerChatGenerators();
+  registerVisionGenerators();
 }

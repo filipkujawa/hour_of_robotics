@@ -8,6 +8,7 @@ import waitBlocks from "./wait";
 import headBlocks from "./head";
 import navigationBlocks from "./navigation";
 import chatBlocks from "./chat";
+import visionBlocks from "./vision";
 import { getAvailableSkills } from "./wait";
 
 export function registerAllBlocks() {
@@ -20,6 +21,7 @@ export function registerAllBlocks() {
   Blockly.common.defineBlocks(headBlocks);
   Blockly.common.defineBlocks(navigationBlocks);
   Blockly.common.defineBlocks(chatBlocks);
+  Blockly.common.defineBlocks(visionBlocks);
 
   // Dynamic dropdown skill block — defined manually because JSON defs
   // don't support function-based dropdowns

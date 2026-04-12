@@ -133,6 +133,18 @@ export const toolboxConfig = {
     },
     {
       kind: "category",
+      name: "Vision AI",
+      colour: "#6c5ce7",
+      contents: [
+        { kind: "block", type: "mars_vision_find" },
+        { kind: "block", type: "mars_vision_find_v" },
+        { kind: "block", type: "mars_vision_detected" },
+        { kind: "block", type: "mars_vision_angle" },
+        { kind: "block", type: "mars_vision_distance" },
+      ],
+    },
+    {
+      kind: "category",
       name: "Events",
       colour: "#6c5ce7",
       contents: [

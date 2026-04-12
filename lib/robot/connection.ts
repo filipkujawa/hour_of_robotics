@@ -432,18 +432,26 @@ export class RobotConnection {
   async armHome(): Promise<void> {
     this.onLog("Arm -> home");
     await this.armGoToJoints([
-      1.6382914814618648,
-      -1.894466273038767,
-      1.5201749607946704,
-      1.1305438406717176,
-      -0.01227184630308513,
-      0.04295146206079795,
+      1.8361750030991124,
+      -0.18407769454627693,
+      -1.3437671701878218,
+      -0.10891263593988053,
+      -0.04601942363656923,
+      0.04601942363656923,
     ], 2.0);
   }
 
   async wave(): Promise<void> {
     this.onLog("Waving!");
-    return this.executeSkill("innate-os/wave", {});
+    // Lift arm up high into wave position — joint3 kept low to keep forearm UP
+    await this.armGoToJoints([0.0, -1.3, 0.3, 0.8, 0.0, 0.0], 1.0);
+    // Wave back and forth
+    for (let i = 0; i < 3; i++) {
+      await this.armGoToJoints([0.0, -1.3, 0.3, 0.8, 0.8, 0.0], 0.3);
+      await this.armGoToJoints([0.0, -1.3, 0.3, 0.8, -0.8, 0.0], 0.3);
+    }
+    // Return to home
+    await this.armHome();
   }
 
   async gripperOpen(): Promise<void> {

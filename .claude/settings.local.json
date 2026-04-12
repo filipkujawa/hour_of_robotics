@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git stash:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git fetch:*)",
+      "Bash(xargs ls:*)",
+      "Bash(curl -s http://localhost:8910/status)",
+      "Bash(python3 -m json.tool)",
+      "WebSearch",
+      "Bash(git stash:*)",
+      "Bash(git pull:*)"
     ]
   }
 }
