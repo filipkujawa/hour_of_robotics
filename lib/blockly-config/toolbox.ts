@@ -38,6 +38,8 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_arm_home" },
         { kind: "block", type: "mars_arm_move_to" },
         { kind: "block", type: "mars_arm_move_to_v" },
+        { kind: "block", type: "mars_arm_move_to_g" },
+        { kind: "block", type: "mars_arm_move_to_gv" },
         { kind: "block", type: "mars_gripper" },
         { kind: "block", type: "mars_wave" },
         { kind: "block", type: "mars_pick_up" },

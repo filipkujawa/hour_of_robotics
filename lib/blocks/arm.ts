@@ -36,6 +36,32 @@ const armBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Move arm — plug in variables or expressions for X, Y, Z in meters (use with tag detection)",
   },
   {
+    type: "mars_arm_move_to_g",
+    message0: "move arm G to x %1 y %2 z %3",
+    args0: [
+      { type: "field_number", name: "X", value: 0 },
+      { type: "field_number", name: "Y", value: 0 },
+      { type: "field_number", name: "Z", value: 20 },
+    ],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#e17055",
+    tooltip: "Move the arm to a position — type values in centimeters",
+  },
+  {
+    type: "mars_arm_move_to_gv",
+    message0: "move arm G to x %1 y %2 z %3",
+    args0: [
+      { type: "input_value", name: "X", check: "Number" },
+      { type: "input_value", name: "Y", check: "Number" },
+      { type: "input_value", name: "Z", check: "Number" },
+    ],
+    previousStatement: null,
+    nextStatement: null,
+    colour: "#e17055",
+    tooltip: "Move arm — plug in variables or expressions for X, Y, Z in meters (use with tag detection)",
+  },
+  {
     type: "mars_gripper",
     message0: "%1 gripper",
     args0: [

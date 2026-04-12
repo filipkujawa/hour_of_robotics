@@ -74,10 +74,10 @@ export class RobotConnection {
 
   constructor(options: RobotConnectionOptions = {}) {
     this.url = options.url || DEFAULT_ROBOT_URL;
-    this.onStatusChange = options.onStatusChange || (() => {});
-    this.onError = options.onError || (() => {});
-    this.onLog = options.onLog || (() => {});
-    this.onArmEstopChange = options.onArmEstopChange || (() => {});
+    this.onStatusChange = options.onStatusChange || (() => { });
+    this.onError = options.onError || (() => { });
+    this.onLog = options.onLog || (() => { });
+    this.onArmEstopChange = options.onArmEstopChange || (() => { });
     this.driveHeadingCmdTopicName = options.driveHeadingCmdTopic ?? "/mars/drive_heading";
     this.rotateDeltaCmdTopicName = options.rotateDeltaCmdTopic ?? "/mars/rotate_delta";
   }
@@ -426,12 +426,12 @@ export class RobotConnection {
   async armHome(): Promise<void> {
     this.onLog("Arm -> home");
     await this.armGoToJoints([
-      1.6152817696435802,
-      -1.3499030933393643,
-      1.4894953450369577,
-      0.5460971604872883,
-      -0.010737865515199488,
-      0.009203884727313847,
+      1.6382914814618648,
+      -1.894466273038767,
+      1.5201749607946704,
+      1.1305438406717176,
+      -0.01227184630308513,
+      0.04295146206079795,
     ], 2.0);
     this.startGripperHold(0.0);
   }
@@ -439,32 +439,6 @@ export class RobotConnection {
   async wave(): Promise<void> {
     this.onLog("Waving!");
     return this.executeSkill("innate-os/wave", {});
-  }
-
-  // Gripper hold loop — keeps re-sending the gripper command so the servo
-  // doesn't give up. Runs every 500ms until the next gripper action cancels it.
-  private gripperHoldInterval: ReturnType<typeof setInterval> | null = null;
-
-  private stopGripperHold() {
-    if (this.gripperHoldInterval) {
-      clearInterval(this.gripperHoldInterval);
-      this.gripperHoldInterval = null;
-    }
-  }
-
-  private startGripperHold(targetJ6: number) {
-    this.stopGripperHold();
-    this.gripperHoldInterval = setInterval(() => {
-      if (!this.lastArmJoints || !this.armService) return;
-      const joints = [...this.lastArmJoints];
-      joints[5] = targetJ6;
-      // Fire-and-forget — don't await, just keep nudging
-      this.armService.callService(
-        { data: { data: joints }, time: 0.3 },
-        () => {},
-        () => {},
-      );
-    }, 500);
   }
 
   async gripperOpen(): Promise<void> {
@@ -855,10 +829,10 @@ export class RobotConnection {
     const [cp, sp] = [Math.cos(rpy[1]), Math.sin(rpy[1])];
     const [cy, sy] = [Math.cos(rpy[2]), Math.sin(rpy[2])];
     return [
-      [cy*cp, cy*sp*sr - sy*cr, cy*sp*cr + sy*sr, xyz[0]],
-      [sy*cp, sy*sp*sr + cy*cr, sy*sp*cr - cy*sr, xyz[1]],
-      [-sp,   cp*sr,            cp*cr,             xyz[2]],
-      [0,     0,                0,                 1],
+      [cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr, xyz[0]],
+      [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr, xyz[1]],
+      [-sp, cp * sr, cp * cr, xyz[2]],
+      [0, 0, 0, 1],
     ];
   }
 
@@ -869,10 +843,10 @@ export class RobotConnection {
     const [x, y, z] = axis;
     const c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
     return [
-      [t*x*x + c,   t*x*y - z*s, t*x*z + y*s, 0],
-      [t*y*x + z*s, t*y*y + c,   t*y*z - x*s, 0],
-      [t*z*x - y*s, t*z*y + x*s, t*z*z + c,   0],
-      [0,           0,           0,            1],
+      [t * x * x + c, t * x * y - z * s, t * x * z + y * s, 0],
+      [t * y * x + z * s, t * y * y + c, t * y * z - x * s, 0],
+      [t * z * x - y * s, t * z * y + x * s, t * z * z + c, 0],
+      [0, 0, 0, 1],
     ];
   }
 
@@ -880,7 +854,7 @@ export class RobotConnection {
    * Multiply two 4x4 matrices
    */
   private static matMul(a: number[][], b: number[][]): number[][] {
-    const r: number[][] = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    const r: number[][] = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
     for (let i = 0; i < 4; i++)
       for (let j = 0; j < 4; j++)
         for (let k = 0; k < 4; k++)
@@ -893,12 +867,12 @@ export class RobotConnection {
    */
   private static matInv(m: number[][]): number[][] {
     // For rigid transforms: R^-1 = R^T, t^-1 = -R^T * t
-    const r: number[][] = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,1]];
+    const r: number[][] = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1]];
     for (let i = 0; i < 3; i++)
       for (let j = 0; j < 3; j++)
         r[i][j] = m[j][i]; // transpose rotation
     for (let i = 0; i < 3; i++)
-      r[i][3] = -(r[i][0]*m[0][3] + r[i][1]*m[1][3] + r[i][2]*m[2][3]);
+      r[i][3] = -(r[i][0] * m[0][3] + r[i][1] * m[1][3] + r[i][2] * m[2][3]);
     return r;
   }
 
@@ -934,9 +908,9 @@ export class RobotConnection {
     const cam_x = pos.x, cam_y = pos.y, cam_z = pos.z;
     const T_cam = this.getArmCameraTransform();
 
-    const bx = T_cam[0][0]*cam_x + T_cam[0][1]*cam_y + T_cam[0][2]*cam_z + T_cam[0][3];
-    const by = T_cam[1][0]*cam_x + T_cam[1][1]*cam_y + T_cam[1][2]*cam_z + T_cam[1][3];
-    const bz = T_cam[2][0]*cam_x + T_cam[2][1]*cam_y + T_cam[2][2]*cam_z + T_cam[2][3];
+    const bx = T_cam[0][0] * cam_x + T_cam[0][1] * cam_y + T_cam[0][2] * cam_z + T_cam[0][3];
+    const by = T_cam[1][0] * cam_x + T_cam[1][1] * cam_y + T_cam[1][2] * cam_z + T_cam[1][3];
+    const bz = T_cam[2][0] * cam_x + T_cam[2][1] * cam_y + T_cam[2][2] * cam_z + T_cam[2][3];
 
     // Shift origin from base_link center to arm base (front of robot)
     const wx = bx - 0.086;
