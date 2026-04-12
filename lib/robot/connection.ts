@@ -512,22 +512,15 @@ export class RobotConnection {
   async setVolume(percent: number): Promise<void> {
     if (!this.ros) return;
     const roslib = await getRoslib();
-    const clamped = Math.max(0, Math.min(100, percent));
+    const clamped = Math.max(0, Math.min(100, Math.round(percent)));
     this.onLog(`Volume -> ${clamped}%`);
 
-    const service = new roslib.Service({
+    const topic = new roslib.Topic({
       ros: this.ros,
       name: "/set_volume",
-      serviceType: "std_srvs/SetBool",
+      messageType: "std_msgs/Int32",
     });
-
-    return new Promise((resolve, reject) => {
-      service.callService(
-        { data: clamped },
-        () => resolve(),
-        (err: string) => { this.onError(`Volume error: ${err}`); reject(new Error(err)); }
-      );
-    });
+    topic.publish({ data: clamped });
   }
 
   // ==========================================
