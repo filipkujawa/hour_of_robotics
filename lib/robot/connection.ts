@@ -648,6 +648,99 @@ export class RobotConnection {
   // Tag Detection (ArUco / AprilTag)
   // ==========================================
 
+  // URDF joint origins and axes for FK computation (base_link → link5 → arm_camera)
+  // Each entry: [parent, xyz, rpy, axis]
+  private static ARM_CHAIN = [
+    { xyz: [0.086, -0.05285, 0.04025], rpy: [0, 0, 0], axis: [0, 0, 1] },  // joint1
+    { xyz: [0, 0, 0.04425], rpy: [0, 0, 0], axis: [0, 1, 0] },             // joint2
+    { xyz: [0.02825, 0, 0.12125], rpy: [0, 0, 0], axis: [0, 1, 0] },       // joint3
+    { xyz: [0.1375, 0, 0.0045], rpy: [0, 0, 0], axis: [0, 1, 0] },         // joint4
+    { xyz: [0.019, 0, 0], rpy: [0, 0, 0], axis: [1, 0, 0] },               // joint5
+  ];
+  // Camera mount on link5
+  private static ARM_CAM_OFFSET = { xyz: [0.03378, 0, 0.05052], rpy: [0, 0.43633, 0] };
+  // Optical frame rotation: Z forward, X right, Y down
+  private static OPT_FRAME_RPY = [-Math.PI / 2, 0, -Math.PI / 2];
+
+  /**
+   * Compute a 4x4 transform from xyz + rpy
+   */
+  private static tfMatrix(xyz: number[], rpy: number[]): number[][] {
+    const [cr, sr] = [Math.cos(rpy[0]), Math.sin(rpy[0])];
+    const [cp, sp] = [Math.cos(rpy[1]), Math.sin(rpy[1])];
+    const [cy, sy] = [Math.cos(rpy[2]), Math.sin(rpy[2])];
+    return [
+      [cy*cp, cy*sp*sr - sy*cr, cy*sp*cr + sy*sr, xyz[0]],
+      [sy*cp, sy*sp*sr + cy*cr, sy*sp*cr - cy*sr, xyz[1]],
+      [-sp,   cp*sr,            cp*cr,             xyz[2]],
+      [0,     0,                0,                 1],
+    ];
+  }
+
+  /**
+   * Rotation matrix for revolute joint about an axis
+   */
+  private static rotAxis(axis: number[], angle: number): number[][] {
+    const [x, y, z] = axis;
+    const c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
+    return [
+      [t*x*x + c,   t*x*y - z*s, t*x*z + y*s, 0],
+      [t*y*x + z*s, t*y*y + c,   t*y*z - x*s, 0],
+      [t*z*x - y*s, t*z*y + x*s, t*z*z + c,   0],
+      [0,           0,           0,            1],
+    ];
+  }
+
+  /**
+   * Multiply two 4x4 matrices
+   */
+  private static matMul(a: number[][], b: number[][]): number[][] {
+    const r: number[][] = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    for (let i = 0; i < 4; i++)
+      for (let j = 0; j < 4; j++)
+        for (let k = 0; k < 4; k++)
+          r[i][j] += a[i][k] * b[k][j];
+    return r;
+  }
+
+  /**
+   * Invert a 4x4 rigid transform (rotation + translation)
+   */
+  private static matInv(m: number[][]): number[][] {
+    // For rigid transforms: R^-1 = R^T, t^-1 = -R^T * t
+    const r: number[][] = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,1]];
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++)
+        r[i][j] = m[j][i]; // transpose rotation
+    for (let i = 0; i < 3; i++)
+      r[i][3] = -(r[i][0]*m[0][3] + r[i][1]*m[1][3] + r[i][2]*m[2][3]);
+    return r;
+  }
+
+  /**
+   * Compute the arm camera's world-frame transform using current joint angles
+   */
+  private getArmCameraTransform(): number[][] {
+    const joints = this.lastArmJoints ?? [0, 0, 0, 0, 0, 0];
+    let T = RobotConnection.tfMatrix([0, 0, 0], [0, 0, 0]); // identity (base_link)
+
+    // Walk the kinematic chain: joint1 → joint5
+    for (let i = 0; i < RobotConnection.ARM_CHAIN.length; i++) {
+      const j = RobotConnection.ARM_CHAIN[i];
+      T = RobotConnection.matMul(T, RobotConnection.tfMatrix(j.xyz, j.rpy));
+      T = RobotConnection.matMul(T, RobotConnection.rotAxis(j.axis, joints[i]));
+    }
+
+    // Camera offset on link5
+    const cam = RobotConnection.ARM_CAM_OFFSET;
+    T = RobotConnection.matMul(T, RobotConnection.tfMatrix(cam.xyz, cam.rpy));
+
+    // Optical frame
+    T = RobotConnection.matMul(T, RobotConnection.tfMatrix([0, 0, 0], RobotConnection.OPT_FRAME_RPY));
+
+    return T;
+  }
+
   async getTagPoseArm(axis: string): Promise<number> {
     if (!this.ros) return this.lastTagArm[axis] ?? 0;
     const roslib = await getRoslib();
@@ -665,15 +758,32 @@ export class RobotConnection {
         if (resolved) return;
         resolved = true;
         topic.unsubscribe();
-        const pos = message.pose.position;
-        const val = axis === "X" ? pos.x : axis === "Y" ? pos.y : pos.z;
-        if (!isNaN(val)) {
-          const rounded = Math.round(val * 1000) / 1000;
-          this.lastTagArm[axis] = rounded;
-          resolve(rounded);
-        } else {
-          resolve(this.lastTagArm[axis] ?? 0);
-        }
+        const pos = message?.pose?.position;
+        if (!pos) { resolve(this.lastTagArm[axis] ?? 0); return; }
+
+        // Detection is in arm camera optical frame: x=right, y=down, z=forward
+        const cam_x = pos.x;
+        const cam_y = pos.y;
+        const cam_z = pos.z;
+
+        // Get the camera's world-frame transform via FK
+        const T_cam = this.getArmCameraTransform();
+
+        // Transform the detection point from camera frame to world frame
+        // point_world = T_cam * point_cam
+        const wx = T_cam[0][0]*cam_x + T_cam[0][1]*cam_y + T_cam[0][2]*cam_z + T_cam[0][3];
+        const wy = T_cam[1][0]*cam_x + T_cam[1][1]*cam_y + T_cam[1][2]*cam_z + T_cam[1][3];
+        const wz = T_cam[2][0]*cam_x + T_cam[2][1]*cam_y + T_cam[2][2]*cam_z + T_cam[2][3];
+
+        this.onLog(`Arm tag base_link: x=${wx.toFixed(3)}, y=${wy.toFixed(3)}, z=${wz.toFixed(3)}`);
+
+        // Cache all axes
+        this.lastTagArm["X"] = Math.round(wx * 1000) / 1000;
+        this.lastTagArm["Y"] = Math.round(wy * 1000) / 1000;
+        this.lastTagArm["Z"] = Math.round(wz * 1000) / 1000;
+
+        const val = axis === "X" ? wx : axis === "Y" ? wy : wz;
+        resolve(isNaN(val) ? (this.lastTagArm[axis] ?? 0) : Math.round(val * 1000) / 1000);
       };
 
       topic.subscribe(handler);
@@ -681,8 +791,14 @@ export class RobotConnection {
         if (!resolved) {
           resolved = true;
           topic.unsubscribe();
-          this.onLog(`Arm tag timeout — using last known ${axis}=${this.lastTagArm[axis] ?? 0}`);
-          resolve(this.lastTagArm[axis] ?? 0);
+          const last = this.lastTagArm[axis];
+          if (last !== undefined) {
+            this.onLog(`Arm tag timeout — using last known ${axis}=${last}`);
+            resolve(last);
+          } else {
+            this.onLog("Arm tag timeout — no previous detection");
+            resolve(0);
+          }
         }
       }, 2000);
     });

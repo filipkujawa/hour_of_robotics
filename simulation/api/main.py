@@ -212,8 +212,10 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
     elif block.type == "mars_gripper":
         action = block.fields.get("ACTION", "OPEN")
         duration = 0.5
-        val = 0.3 if action == "OPEN" else -0.5
-        sim.animate_joints({"joint6": val}, sim_time, duration)
+        # Match real robot: open=0.85, close=0.0
+        # joint6M mirrors with multiplier=-1
+        val = 0.85 if action == "OPEN" else 0.0
+        sim.animate_joints({"joint6": val, "joint6M": -val}, sim_time, duration)
         sim_time += duration
     elif block.type == "mars_wave":
         # Wave animation

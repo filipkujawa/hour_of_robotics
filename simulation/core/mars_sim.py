@@ -326,6 +326,7 @@ class MarsSimulator:
         "joint4": 0.8927768185494431,
         "joint5": -0.035281558121369745,
         "joint6": 0.010737865515199488,
+        "joint6M": -0.010737865515199488,  # mirrored gripper finger
     }
 
     def reset_state(self):
