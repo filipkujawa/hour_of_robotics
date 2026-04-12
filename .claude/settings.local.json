@@ -8,7 +8,8 @@
       "Bash(python3 -m json.tool)",
       "WebSearch",
       "Bash(git stash:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(wc -l /Users/henryspeiser/Desktop/robohacks/hour_of_robotics/lib/blocks/*.ts /Users/henryspeiser/Desktop/robohacks/hour_of_robotics/lib/generators/python/*.ts)"
     ]
   }
 }
