@@ -654,50 +654,53 @@ export class RobotConnection {
       return;
     }
 
-    const roslib = await getRoslib();
     const inputsJson = JSON.stringify(parameters);
     this.onLog(`Sending skill "${skillName}" with inputs ${inputsJson}`);
 
+    // Use rosbridge's send_action_goal operation directly via callOnConnection
+    // instead of roslib's ActionClient (which uses the ROS1 action protocol
+    // and can't handle ROS2 action types like brain_messages/action/ExecuteSkill)
     return new Promise((resolve, reject) => {
-      const actionClient = new roslib.ActionClient({
-        ros: this.ros,
-        serverName: "/execute_skill",
-        actionName: "brain_messages/ExecuteSkill",
+      const id = `skill_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      const timeout = setTimeout(() => {
+        this.ros.off(id, undefined);
+        this.onError(`Skill "${skillName}" timed out`);
+        reject(new Error("timeout"));
+      }, 60000);
+
+      // Listen for result/feedback via roslib's event system
+      // rosbridge sends responses with the same id
+      this.ros.on(id, (msg: { values?: { result?: { success: boolean; message?: string }; feedback?: string } }) => {
+        // Check if this is a result (has result field)
+        if (msg.values?.result) {
+          clearTimeout(timeout);
+          this.ros.off(id, undefined);
+          if (msg.values.result.success === false) {
+            const errMsg = msg.values.result.message || "Skill reported failure";
+            this.onError(`Skill "${skillName}" failed: ${errMsg}`);
+            reject(new Error(errMsg));
+          } else {
+            this.onLog(`Skill "${skillName}" done`);
+            resolve();
+          }
+        } else if (msg.values?.feedback) {
+          this.onLog(`Skill "${skillName}" feedback: ${msg.values.feedback}`);
+        }
       });
 
-      const goal = new roslib.Goal({
-        actionClient,
-        goalMessage: {
+      // Send via rosbridge protocol
+      this.ros.callOnConnection({
+        op: "send_action_goal",
+        id: id,
+        action: "/execute_skill",
+        action_type: "brain_messages/action/ExecuteSkill",
+        args: {
           skill_type: skillName,
           inputs: inputsJson,
         },
+        feedback: true,
       });
-
-      goal.on("feedback", (feedback: unknown) => {
-        this.onLog(`Skill "${skillName}" feedback: ${JSON.stringify(feedback)}`);
-      });
-
-      goal.on("result", (result: unknown) => {
-        this.onLog(`Skill "${skillName}" result: ${JSON.stringify(result)}`);
-        // Attempt to detect failure in common result shapes
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const res = (result as any)?.result ?? result;
-        if (res && res.success === false) {
-          const msg = res.message || "Skill reported failure";
-          this.onError(`Skill "${skillName}" failed: ${msg}`);
-          reject(new Error(String(msg)));
-          return;
-        }
-        this.onLog(`Skill "${skillName}" done`);
-        resolve();
-      });
-
-      goal.on("timeout", () => {
-        this.onError(`Skill "${skillName}" timed out`);
-        reject(new Error("timeout"));
-      });
-
-      goal.send();
     });
   }
 
