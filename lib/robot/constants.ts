@@ -1,1 +1,1 @@
-export const DEFAULT_ROBOT_URL = "ws://mars-the-blue.local:9971";
+export const DEFAULT_ROBOT_URL = "ws://mars-the-blue.local:9090";
