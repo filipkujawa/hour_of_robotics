@@ -476,11 +476,18 @@ export class RobotConnection {
 
   async say(text: string): Promise<void> {
     this.onLog(`Say: "${text}"`);
-    if (this.ttsTopic) {
-      this.ttsTopic.publish({ data: text });
+    try {
+      await this.executeSkill("innate-os/speak", { text });
       return;
+    } catch (error) {
+      if (!this.ttsTopic) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      this.onError(`Speak skill failed, falling back to TTS topic: ${message}`);
+      this.publishTts(text);
     }
-    return this.executeSkill("innate-os/speak", { text });
   }
 
   async setVolume(percent: number): Promise<void> {
@@ -711,6 +718,15 @@ export class RobotConnection {
   chatSay(text: string) {
     if (!this.ttsTopic) {
       this.onError("Not connected");
+      return;
+    }
+
+    this.publishTts(text);
+  }
+
+  private publishTts(text: string) {
+    if (!this.ttsTopic) {
+      this.onError("TTS topic unavailable");
       return;
     }
 
