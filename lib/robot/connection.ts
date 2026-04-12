@@ -649,7 +649,7 @@ export class RobotConnection {
   // ==========================================
 
   async getTagPoseArm(axis: string): Promise<number> {
-    if (!this.ros) return 0;
+    if (!this.ros) return this.lastTagArm[axis] ?? 0;
     const roslib = await getRoslib();
 
     return new Promise((resolve) => {
@@ -659,19 +659,38 @@ export class RobotConnection {
         messageType: "geometry_msgs/PoseStamped",
       });
 
+      let resolved = false;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handler = (message: any) => {
+        if (resolved) return;
+        resolved = true;
         topic.unsubscribe();
         const pos = message.pose.position;
         const val = axis === "X" ? pos.x : axis === "Y" ? pos.y : pos.z;
-        // NaN means no detection
-        resolve(isNaN(val) ? 0 : Math.round(val * 1000) / 1000);
+        if (!isNaN(val)) {
+          const rounded = Math.round(val * 1000) / 1000;
+          this.lastTagArm[axis] = rounded;
+          resolve(rounded);
+        } else {
+          resolve(this.lastTagArm[axis] ?? 0);
+        }
       };
 
       topic.subscribe(handler);
-      setTimeout(() => { topic.unsubscribe(); resolve(0); }, 2000);
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          topic.unsubscribe();
+          this.onLog(`Arm tag timeout — using last known ${axis}=${this.lastTagArm[axis] ?? 0}`);
+          resolve(this.lastTagArm[axis] ?? 0);
+        }
+      }, 2000);
     });
   }
+
+  // Last known tag positions — used when detection times out
+  private lastTagHead: Record<string, number> = {};
+  private lastTagArm: Record<string, number> = {};
 
   // Current head tilt in radians (updated by setHeadTilt)
   private headTiltRad = 0;
@@ -731,6 +750,11 @@ export class RobotConnection {
 
         this.onLog(`Tag base_link: x=${base_x.toFixed(3)}, y=${base_y.toFixed(3)}, z=${base_z.toFixed(3)}`);
 
+        // Cache all axes
+        this.lastTagHead["X"] = Math.round(base_x * 1000) / 1000;
+        this.lastTagHead["Y"] = Math.round(base_y * 1000) / 1000;
+        this.lastTagHead["Z"] = Math.round(base_z * 1000) / 1000;
+
         const val = axis === "X" ? base_x : axis === "Y" ? base_y : base_z;
         resolve(isNaN(val) ? 0 : Math.round(val * 1000) / 1000);
       };
@@ -740,8 +764,14 @@ export class RobotConnection {
         if (!resolved) {
           resolved = true;
           topic.unsubscribe();
-          this.onLog("Tag timeout — no message received");
-          resolve(0);
+          const last = this.lastTagHead[axis];
+          if (last !== undefined) {
+            this.onLog(`Tag timeout — using last known ${axis}=${last}`);
+            resolve(last);
+          } else {
+            this.onLog("Tag timeout — no previous detection");
+            resolve(0);
+          }
         }
       }, 3000);
     });
@@ -866,28 +896,54 @@ export class RobotConnection {
       const id = `skill_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
       const timeout = setTimeout(() => {
-        this.ros.off(id, undefined);
-        this.onError(`Skill "${skillName}" timed out`);
-        reject(new Error("timeout"));
+        if (!settled) {
+          settled = true;
+          this.ros.off(id, undefined);
+          if (wsHandler && socket) socket.removeEventListener("message", wsHandler);
+          this.onError(`Skill "${skillName}" timed out`);
+          reject(new Error("timeout"));
+        }
       }, 60000);
 
-      // Listen for result/feedback via roslib's event system
+      let settled = false;
+      const settle = (success: boolean, errMsg?: string) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (wsHandler && socket) socket.removeEventListener("message", wsHandler);
+        if (success) {
+          this.onLog(`Skill "${skillName}" done`);
+          resolve();
+        } else {
+          this.onError(`Skill "${skillName}" failed: ${errMsg}`);
+          reject(new Error(errMsg));
+        }
+      };
+
+      // Listen via roslib event system (in case it routes by id)
       this.ros.on(id, (msg: { values?: { result?: { success: boolean; message?: string }; feedback?: string } }) => {
         if (msg.values?.result) {
-          clearTimeout(timeout);
-          this.ros.off(id, undefined);
-          if (msg.values.result.success === false) {
-            const errMsg = msg.values.result.message || "Skill reported failure";
-            this.onError(`Skill "${skillName}" failed: ${errMsg}`);
-            reject(new Error(errMsg));
-          } else {
-            this.onLog(`Skill "${skillName}" done`);
-            resolve();
-          }
-        } else if (msg.values?.feedback) {
-          this.onLog(`Skill "${skillName}" feedback: ${msg.values.feedback}`);
+          settle(msg.values.result.success !== false, msg.values.result.message);
         }
       });
+
+      // Also listen on raw WebSocket — roslib may not route action_result by id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const socket = (this.ros as any).transport?.socket;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wsHandler = socket ? (event: any) => {
+        try {
+          const msg = JSON.parse(typeof event.data === "string" ? event.data : "");
+          if (msg.id !== id) return;
+          if (msg.op === "action_result") {
+            const result = msg.values ?? {};
+            settle(result.success !== false && result.result?.success !== false, result.message || result.result?.message);
+          } else if (msg.op === "action_feedback" && !settled) {
+            this.onLog(`Skill feedback: ${JSON.stringify(msg.values?.feedback ?? msg.values).slice(0, 100)}`);
+          }
+        } catch { /* not our message */ }
+      } : null;
+      if (socket && wsHandler) socket.addEventListener("message", wsHandler);
 
       this.ros.callOnConnection({
         op: "send_action_goal",
