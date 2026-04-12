@@ -35,7 +35,7 @@ const speechBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
   {
     type: "mars_say_value",
     message0: "say %1",
-    args0: [{ type: "input_value", name: "TEXT", check: "String" }],
+    args0: [{ type: "input_value", name: "TEXT" }],
     previousStatement: null,
     nextStatement: null,
     colour: "#fdcb6e",

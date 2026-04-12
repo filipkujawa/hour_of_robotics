@@ -22,7 +22,7 @@ export function registerSpeechGenerators() {
 
   pythonGenerator.forBlock["mars_say_value"] = function (block) {
     const text = pythonGenerator.valueToCode(block, "TEXT", Order.NONE) || '""';
-    return `mars.say(${text})\n`;
+    return `mars.say(str(${text}))\n`;
   };
 
   pythonGenerator.forBlock["mars_listen"] = function () {
