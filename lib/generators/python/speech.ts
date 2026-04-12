@@ -34,7 +34,7 @@ export function registerSpeechGenerators() {
     const query = String(block.getFieldValue("QUERY") || "")
       .replace(/\\/g, "\\\\")
       .replace(/"/g, '\\"');
-    return [`"${query}" in str(${text})`, Order.RELATIONAL];
+    return [`"${query}".lower() in str(${text}).lower()`, Order.RELATIONAL];
   };
 
   pythonGenerator.forBlock["mars_set_voice"] = function (block) {

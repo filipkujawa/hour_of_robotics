@@ -682,7 +682,7 @@ export class BlockExecutor {
       case "mars_text_contains": {
         const text = String(await this.evaluateValue(block.inputs.TEXT || null) || "");
         const query = String(block.fields.QUERY || "");
-        return text.includes(query);
+        return text.toLowerCase().includes(query.toLowerCase());
       }
 
       case "math_arithmetic": {
