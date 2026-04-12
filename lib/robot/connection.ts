@@ -626,19 +626,34 @@ export class RobotConnection {
       const topic = new roslib.Topic({
         ros: this.ros,
         name: "/aruco_left/cube_pose",
-        messageType: "geometry_msgs/PoseStamped",
+        messageType: "geometry_msgs/msg/PoseStamped",
       });
 
+      let resolved = false;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handler = (message: any) => {
+        if (resolved) return;
+        resolved = true;
         topic.unsubscribe();
-        const pos = message.pose.position;
+        this.onLog(`Tag raw: ${JSON.stringify(message).slice(0, 200)}`);
+        const pos = message?.pose?.position;
+        if (!pos) {
+          resolve(0);
+          return;
+        }
         const val = axis === "X" ? pos.x : axis === "Y" ? pos.y : pos.z;
         resolve(isNaN(val) ? 0 : Math.round(val * 1000) / 1000);
       };
 
       topic.subscribe(handler);
-      setTimeout(() => { topic.unsubscribe(); resolve(0); }, 2000);
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          topic.unsubscribe();
+          this.onLog("Tag timeout — no message received");
+          resolve(0);
+        }
+      }, 3000);
     });
   }
 
