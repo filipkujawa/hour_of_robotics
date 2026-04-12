@@ -91,6 +91,26 @@ class MarsSimulator:
                 entity_path = self.get_entity_path_for_link(joint.child_link)
                 self.rec.log(entity_path, transform)
 
+    # Joint limits for clamping IK seeds
+    _IK_LIMITS = [
+        None,  # index 0: base link (fixed)
+        (-1.5708, 1.5708),   # joint1
+        (-1.5708, 1.22),     # joint2
+        (-1.5708, 1.7453),   # joint3
+        (-1.9199, 1.7453),   # joint4
+        (-1.5708, 1.5708),   # joint5
+        (-0.8727, 0.3491),   # joint6
+        None,  # index 7: ee link (fixed)
+    ]
+
+    def _clamp_seed(self, seed: list[float]) -> list[float]:
+        """Clamp an IK seed to joint limits so ikpy doesn't crash."""
+        clamped = list(seed)
+        for i, lim in enumerate(self._IK_LIMITS):
+            if lim is not None:
+                clamped[i] = max(lim[0], min(lim[1], clamped[i]))
+        return clamped
+
     def solve_ik(self, x: float, y: float, z: float) -> dict[str, float]:
         """Solve IK for a target XYZ position (meters).
 
@@ -104,27 +124,25 @@ class MarsSimulator:
         current = [0.0] * 8
         for i, jname in enumerate(["joint1", "joint2", "joint3", "joint4", "joint5", "joint6"]):
             current[i + 1] = self.current_joints.get(jname, 0.0)
+        current = self._clamp_seed(current)
 
         # Compute the geometrically correct base rotation for j1
-        # This is what the real robot does — point the arm toward the target
         j1_hint = math.atan2(y, x) if abs(x) > 0.001 or abs(y) > 0.001 else current[1]
 
         # Try multiple seeds: current config, j1-hinted, and perturbations
         seeds = [current]
 
-        # Seed with correct j1 rotation
         hinted = list(current)
         hinted[1] = j1_hint
-        seeds.append(hinted)
+        seeds.append(self._clamp_seed(hinted))
 
-        # Perturbations on j2 (shoulder) and j3 (elbow)
         for j2_off in [0.0, -0.3, 0.3, -0.6, 0.6]:
             for j3_off in [0.0, 0.3, -0.3, 0.6]:
                 seed = list(current)
                 seed[1] = j1_hint
                 seed[2] = current[2] + j2_off
                 seed[3] = current[3] + j3_off
-                seeds.append(seed)
+                seeds.append(self._clamp_seed(seed))
 
         # Solve IK with each seed, collect valid solutions
         candidates = []
@@ -135,11 +153,9 @@ class MarsSimulator:
                 ik_result = self.ik_chain.inverse_kinematics(target, initial_position=seed)
                 joints = {f"joint{i+1}": float(ik_result[i+1]) for i in range(6)}
 
-                # Skip if in collision
                 if self.collision.check_collision(joints):
                     continue
 
-                # Score: distance from current config (prefer minimal movement)
                 result_arr = np.array([joints[f"joint{i+1}"] for i in range(6)])
                 dist = float(np.linalg.norm(result_arr - current_arr))
                 candidates.append((dist, joints))
@@ -147,12 +163,12 @@ class MarsSimulator:
                 continue
 
         if candidates:
-            # Pick the solution closest to current config
             candidates.sort(key=lambda x: x[0])
             return candidates[0][1]
 
-        # Fallback: use the first seed result even if it collides
-        ik_result = self.ik_chain.inverse_kinematics(target, initial_position=seeds[0])
+        # Fallback with a safe zero seed
+        safe_seed = self._clamp_seed([0.0] * 8)
+        ik_result = self.ik_chain.inverse_kinematics(target, initial_position=safe_seed)
         return {f"joint{i+1}": float(ik_result[i+1]) for i in range(6)}
 
     def animate_joints(self, target_joints: dict[str, float], start_time: float, duration: float = 1.0):
@@ -218,8 +234,18 @@ class MarsSimulator:
         
         self.reset_state()
 
+    # Real home joint positions from the robot
+    HOME_JOINTS = {
+        "joint1": 1.5876701154616386,
+        "joint2": -1.5968740001889525,
+        "joint3": 1.6152817696435802,
+        "joint4": 0.8927768185494431,
+        "joint5": -0.035281558121369745,
+        "joint6": 0.010737865515199488,
+    }
+
     def reset_state(self):
-        """Resets the internal robot state."""
+        """Resets the internal robot state, starting at the real home position."""
         self.pos_x = 0.0
         self.pos_y = 0.0
         self.heading = 0.0
@@ -227,6 +253,11 @@ class MarsSimulator:
         self.waypoints = [[0.0, 0.0, 0.0]]
 
         self.rec.set_time("sim_time", duration=0)
+
+        # Set arm to real home position
+        for jname, val in self.HOME_JOINTS.items():
+            self.set_joint_position(jname, val, log=True)
+
         self.log_current_state()
 
     def add_waypoint(self):
