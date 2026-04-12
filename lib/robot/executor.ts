@@ -143,14 +143,13 @@ export class BlockExecutor {
         await this.robot.armHome();
         break;
 
-      case "mars_arm_move_to":
-        await this.robot.armGoToJoints([
-          Number(block.fields.X) || 0,
-          Number(block.fields.Y) || 0,
-          Number(block.fields.Z) || 20,
-          0, 0, 0, 0,
-        ]);
+      case "mars_arm_move_to": {
+        const x = (Number(block.fields.X) || 0) / 100;  // cm to m
+        const y = (Number(block.fields.Y) || 0) / 100;
+        const z = (Number(block.fields.Z) || 20) / 100;
+        await this.robot.executeSkill("arm_move_to_xyz", { x, y, z });
         break;
+      }
 
       case "mars_joint_position": {
         const jointIndex = Number(block.fields.JOINT) || 1;
