@@ -183,12 +183,12 @@ def process_block_chain(sim: MarsSimulator, block: Optional[BlockData], sim_time
     elif block.type == "mars_arm_home":
         duration = 2.0
         sim.animate_joints({
-            "joint1": 1.5876701154616386,
-            "joint2": -1.5968740001889525,
-            "joint3": 1.6152817696435802,
-            "joint4": 0.8927768185494431,
-            "joint5": -0.035281558121369745,
-            "joint6": 0.010737865515199488,
+            "joint1": 1.6152817696435802,
+            "joint2": -1.3499030933393643,
+            "joint3": 1.4894953450369577,
+            "joint4": 0.5460971604872883,
+            "joint5": -0.010737865515199488,
+            "joint6": 0.009203884727313847,
         }, sim_time, duration)
         sim_time += duration
     elif block.type == "mars_arm_move_to":

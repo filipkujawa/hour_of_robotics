@@ -320,15 +320,15 @@ class MarsSimulator:
         # Visible if the cube is in front of the robot and within 1 meter
         return tag["x"] > 0 and dist < 1.0
 
-    # Real home joint positions from the robot
+    # Home (zero) joint positions from the robot
     HOME_JOINTS = {
-        "joint1": 1.5876701154616386,
-        "joint2": -1.5968740001889525,
-        "joint3": 1.6152817696435802,
-        "joint4": 0.8927768185494431,
-        "joint5": -0.035281558121369745,
-        "joint6": 0.010737865515199488,
-        "joint6M": -0.010737865515199488,  # mirrored gripper finger
+        "joint1": 1.6152817696435802,
+        "joint2": -1.3499030933393643,
+        "joint3": 1.4894953450369577,
+        "joint4": 0.5460971604872883,
+        "joint5": -0.010737865515199488,
+        "joint6": 0.009203884727313847,
+        "joint6M": -0.009203884727313847,
     }
 
     def reset_state(self):
