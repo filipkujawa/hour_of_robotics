@@ -160,6 +160,24 @@ export function useRobot() {
     }
   }, [addLog]);
 
+  const emergencyStop = useCallback(async () => {
+    executorRef.current?.stop();
+    setIsRunning(false);
+
+    if (!robotRef.current) {
+      addLog("Not connected to robot", "error");
+      return;
+    }
+
+    try {
+      robotRef.current.stop();
+      await robotRef.current.armTorqueOff();
+      addLog("E-STOP: velocity zeroed, arm torque off", "error");
+    } catch (err) {
+      addLog(`E-STOP error: ${err instanceof Error ? err.message : String(err)}`, "error");
+    }
+  }, [addLog]);
+
   return {
     status,
     isRunning,
@@ -176,5 +194,6 @@ export function useRobot() {
     clearArmFaults,
     armTorqueOn,
     armTorqueOff,
+    emergencyStop,
   };
 }

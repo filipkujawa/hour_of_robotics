@@ -1,0 +1,9 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="mars_when_tag" x="28" y="32">
+    <statement name="DO">
+      <block type="mars_drive_to">
+        <field name="INSTRUCTION">the AprilTag</field>
+      </block>
+    </statement>
+  </block>
+</xml>

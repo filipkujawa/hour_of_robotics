@@ -304,17 +304,7 @@ export class RobotConnection {
 
   async armHome(): Promise<void> {
     this.onLog("Arm -> home");
-    return this.armGoToJoints(
-      [
-        1.5876701154616386,
-        -1.5968740001889525,
-        1.6152817696435802,
-        0.8927768185494431,
-        -0.035281558121369745,
-        0.010737865515199488,
-      ],
-      2.0
-    );
+    return this.armGoToJoints([0, 0, 0, 0, 0, 0], 2.0);
   }
 
   async wave(): Promise<void> {

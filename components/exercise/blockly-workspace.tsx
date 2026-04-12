@@ -88,6 +88,7 @@ export function BlocklyWorkspace({
     clearArmFaults,
     armTorqueOn,
     armTorqueOff,
+    emergencyStop,
   } = useRobot();
 
   const [loadingSkills, setLoadingSkills] = useState(false);
@@ -689,6 +690,14 @@ export function BlocklyWorkspace({
           </nav>
         </div>
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={emergencyStop}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-[11px] tracking-wide transition-colors"
+            title="Emergency Stop — zeroes velocity and disables arm torque"
+          >
+            E-STOP
+          </button>
+          <div className="h-4 w-px bg-[#e2e1de]" />
           <button onClick={() => { Blockly.DropDownDiv.hideWithoutAnimation(); setConnectOpen(true); }} className="flex items-center gap-1.5 hover:bg-[#fafaf9] px-2 py-1 rounded transition-colors">
             <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === "connected" ? "bg-green-600" : connectionStatus === "connecting" ? "bg-amber-500 animate-pulse" : connectionStatus === "error" ? "bg-red-500" : "bg-[#d4d3d0]"}`} />
             <Wifi className="h-3 w-3 text-[#9c9c9a]" />

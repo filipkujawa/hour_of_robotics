@@ -1,0 +1,15 @@
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="mars_arm_move_to" x="28" y="32">
+    <field name="X">0</field>
+    <field name="Y">10</field>
+    <field name="Z">30</field>
+    <next>
+      <block type="mars_gripper">
+        <field name="ACTION">OPEN</field>
+        <next>
+          <block type="mars_arm_home"></block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

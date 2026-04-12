@@ -1,0 +1,47 @@
+# Navigate to the Tag
+
+An AprilTag is a printed square marker that a robot can detect and locate in 3D space using its camera. MARS uses AprilTags as reliable landmarks — instead of describing a location in abstract coordinates, you place a tag there and let the robot find it visually.
+
+<Callout type="concept" title="Why AprilTags">
+AprilTags give the robot a precise reference point in the real world. Once MARS can see a tag, it knows the tag's position relative to the camera, which is enough to drive toward it.
+</Callout>
+
+## How tag detection works
+
+MARS has two cameras: one on the head and one on the arm. Each can detect AprilTags and report the tag's position as X, Y, and Z values in centimeters relative to that camera. The head camera is best for navigation because it has a wider field of view.
+
+The key sensor blocks are:
+
+- **Is tag detected** — returns true if any tag is visible
+- **Tag position (head/arm, axis)** — returns the X, Y, or Z distance to the tag
+- **When tag detected** — waits until a tag appears, then runs the attached blocks
+
+## The approach strategy
+
+A simple approach to reach a tag looks like this:
+
+1. Spin slowly until the tag is detected.
+2. Read the tag's X position to know if it is left or right of center.
+3. Turn to center the tag, then drive forward.
+4. Stop when close enough (check distance).
+
+You do not need to be perfectly precise for this lesson — getting MARS within arm's reach of the tag is the goal.
+
+<Callout type="robot-required" title="On the real robot">
+Place an AprilTag on a flat surface or tape it to an object at roughly camera height. Make sure the room is well lit so the camera can detect the tag consistently.
+</Callout>
+
+## From blocks to code
+
+The block sequence you build will translate into Python like this:
+
+```python
+mars.wait_until(lambda: mars.is_tag_detected())
+mars.drive_to("the AprilTag")
+```
+
+## What you should remember
+
+- AprilTags are visual landmarks that give the robot a measurable position target.
+- The head camera is the better choice for navigation-level detection.
+- Tag X/Y/Z values are in centimeters relative to the camera, not the room.

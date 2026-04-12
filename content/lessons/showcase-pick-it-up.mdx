@@ -1,0 +1,42 @@
+# Pick It Up
+
+MARS has a multi-joint arm with a gripper at the end. Picking up an object requires two things to happen in the right order: the arm must reach the object, and the gripper must close around it. Getting the order wrong — or skipping the open step — means the gripper collides with the object instead of grabbing it.
+
+<Callout type="concept" title="Gripper state">
+Always open the gripper before moving the arm toward an object. If the gripper is already closed when the arm descends, it will push the object away instead of grasping it.
+</Callout>
+
+## How the arm is positioned
+
+The arm_move_to block accepts X, Y, and Z values in centimeters relative to the robot. Z controls height — lower Z values bring the end effector closer to the ground. The arm_home block returns all joints to a safe resting position.
+
+A basic pick-up sequence:
+
+1. Open the gripper.
+2. Move the arm to a position above the object.
+3. Lower Z until the gripper is around the object.
+4. Close the gripper.
+
+## Using the high-level pick up block
+
+If the object is sitting on a flat surface directly in front of the arm camera, the `pick_up` block handles the full sequence automatically. It searches for a graspable object, positions the arm, and closes the gripper.
+
+Use the manual approach when you need more control over exactly where the arm goes — for example when the object is at a specific known location from the previous lesson.
+
+<Callout type="robot-required" title="On the real robot">
+Place a small object like a foam cube or block within reach of the arm, roughly in front of the robot at surface level. Make sure nothing is blocking the arm's path before running the sequence.
+</Callout>
+
+## From blocks to code
+
+```python
+mars.gripper("open")
+mars.arm_move_to(0, 10, 5)
+mars.gripper("close")
+```
+
+## What you should remember
+
+- Open the gripper before moving toward the object, not after.
+- X/Y/Z in arm_move_to are in centimeters; low Z means close to the ground.
+- The high-level pick_up block automates this if the object is directly in front of the arm camera.

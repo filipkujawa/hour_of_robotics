@@ -1,0 +1,49 @@
+# Place It Higher
+
+Placing an object is not the same as dropping it. The arm needs to reach the target surface before the gripper opens — otherwise the object falls from height and may roll or tip over. This lesson focuses on delivering the object precisely to an elevated surface.
+
+<Callout type="concept" title="Place vs drop">
+Dropping releases the object wherever the gripper happens to be. Placing means moving to the exact target position first, then opening the gripper so the object lands exactly where you intend.
+</Callout>
+
+## Planning the placement position
+
+The arm_move_to block uses X, Y, and Z in centimeters. To place on a higher surface, increase Z compared to where you picked up. If the shelf or surface is 20 cm off the ground, your Z target should be just above that — enough to clear the edge but low enough to set the object down gently.
+
+A basic place sequence:
+
+1. Move the arm to the target X/Y position at a higher Z.
+2. Open the gripper to release the object.
+3. Return the arm to home so it is out of the way.
+
+## Choosing the right height
+
+Too high and the object drops the last few centimeters and may tip. Too low and the arm collides with the surface before the gripper can open. Aim for the arm to be just above the surface — roughly 2 to 5 cm of clearance is enough.
+
+<Callout type="robot-required" title="On the real robot">
+Place a small raised surface — a book, a box, or a step — within reach of the arm. Measure the approximate height so you can set a realistic Z value in your blocks.
+</Callout>
+
+## The complete pick-and-place flow
+
+Across all three Showcase lessons you have built a full pick-and-place pipeline:
+
+1. **Navigate to the Tag** — find the target with vision
+2. **Pick It Up** — grasp the object from the surface
+3. **Place It Higher** — deliver it to an elevated position
+
+This is the same structure used in industrial and warehouse robotics: detect, grasp, transport, release.
+
+## From blocks to code
+
+```python
+mars.arm_move_to(0, 10, 30)
+mars.gripper("open")
+mars.arm_home()
+```
+
+## What you should remember
+
+- Move the arm to the placement position before opening the gripper.
+- Z controls height; match it to the surface you are placing on.
+- Always return to arm_home after placing so the arm does not block the camera or next movement.

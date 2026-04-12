@@ -1,3 +1,7 @@
+import showcaseNavigateToTheTagXml from "@/content/scaffolds/showcase-navigate-to-the-tag.xml";
+import showcasePickItUpXml from "@/content/scaffolds/showcase-pick-it-up.xml";
+import showcasePlaceItHigherXml from "@/content/scaffolds/showcase-place-it-higher.xml";
+
 export type Role = "student" | "teacher";
 export type LessonStep = "learn" | "exercise";
 export type ProgressStatus = "not_started" | "in_progress" | "completed";
@@ -53,7 +57,8 @@ const chapterPalette = [
   "#d97706",
   "#dc2626",
   "#0891b2",
-  "#16a34a"
+  "#16a34a",
+  "#e11d48"
 ] as const;
 
 type ChapterSeed = {
@@ -105,6 +110,12 @@ const chapterSeeds: ChapterSeed[] = [
     title: "Capstone",
     description: "Design, build, debug, and present a complete MARS project that demonstrates autonomous behavior.",
     lessons: ["Define Your Project", "Build & Train", "Debug & Iterate", "Demo Day"]
+  },
+  {
+    slug: "showcase",
+    title: "Showcase",
+    description: "Combine navigation, sensing, and manipulation into a complete pick-and-place demo.",
+    lessons: ["Navigate to the Tag", "Pick It Up", "Place It Higher"]
   }
 ];
 
@@ -207,6 +218,72 @@ chapterOneLessonTwo.exercise = {
 
 const chapterOneLessonThree = chapters[0].lessons[2];
 chapterOneLessonThree.mdxPath = "content/lessons/foundations-your-first-skill-call.mdx";
+
+const showcaseLessonOne = chapters[7].lessons[0];
+showcaseLessonOne.summary =
+  "Use AprilTag detection to find a marker in the room and drive MARS toward it.";
+showcaseLessonOne.mdxPath = "content/lessons/showcase-navigate-to-the-tag.mdx";
+showcaseLessonOne.exercise = {
+  type: "blockly",
+  title: "Navigate to the Tag",
+  prompt:
+    "Build a sequence that waits until MARS detects an AprilTag, then drives toward it until close.",
+  successCriteria: [
+    "Your blocks detect an AprilTag using a sensor block.",
+    "MARS moves toward the tag based on the detected position.",
+    "The sequence stops or slows when MARS is close to the tag."
+  ],
+  hints: [
+    'Use the "When tag detected" event block as your trigger.',
+    "Read the tag X/Y position from the head camera to steer toward it.",
+    "Add a distance check so MARS stops before it hits the object."
+  ],
+  initialXml: showcaseNavigateToTheTagXml
+};
+
+const showcaseLessonTwo = chapters[7].lessons[1];
+showcaseLessonTwo.summary =
+  "Lower the arm, close the gripper, and pick up an object sitting near the AprilTag.";
+showcaseLessonTwo.mdxPath = "content/lessons/showcase-pick-it-up.mdx";
+showcaseLessonTwo.exercise = {
+  type: "blockly",
+  title: "Pick It Up",
+  prompt:
+    "Position the arm over the object and close the gripper to grab it.",
+  successCriteria: [
+    "Your blocks open the gripper before approaching the object.",
+    "The arm moves to a position over the object.",
+    "The gripper closes to secure the object."
+  ],
+  hints: [
+    "Open the gripper first so it is ready before the arm descends.",
+    "Use arm_move_to with a low Z value to reach down toward the surface.",
+    "Close the gripper after the arm is in position."
+  ],
+  initialXml: showcasePickItUpXml
+};
+
+const showcaseLessonThree = chapters[7].lessons[2];
+showcaseLessonThree.summary =
+  "Lift the arm to a higher position and release the object onto an elevated surface.";
+showcaseLessonThree.mdxPath = "content/lessons/showcase-place-it-higher.mdx";
+showcaseLessonThree.exercise = {
+  type: "blockly",
+  title: "Place It Higher",
+  prompt:
+    "Raise the arm to a higher Z position and open the gripper to set the object down on an elevated surface.",
+  successCriteria: [
+    "The arm moves to a higher Z position than where it picked up.",
+    "The gripper opens to release the object.",
+    "The arm returns home after placing."
+  ],
+  hints: [
+    "Increase the Z value in arm_move_to to raise the arm above the surface.",
+    "Open the gripper only after the arm has reached the target height.",
+    "Finish with arm_home so the arm does not block the camera."
+  ],
+  initialXml: showcasePlaceItHigherXml
+};
 
 export const chapterMap = new Map(chapters.map((chapter) => [chapter.slug, chapter]));
 export const lessonMap = new Map(
