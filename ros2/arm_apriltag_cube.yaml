@@ -1,0 +1,33 @@
+apriltag:
+  ros__parameters:
+    # Use "raw" or "compressed" image transport. Remap image_rect accordingly.
+    image_transport: raw
+
+    # AprilTag family. NOTE: ArUco 4x4_50 will NOT work with apriltag_ros.
+    # Common AprilTag families: 16h5, 25h9, 36h11, Standard41h12, Standard52h13.
+    family: 16h5
+
+    # Tag edge size in meters (30 mm).
+    size: 0.03
+
+    max_hamming: 0
+    detector:
+      threads: 2
+      decimate: 2.0
+      blur: 0.0
+      refine: 1
+      sharpening: 0.25
+      debug: 0
+
+    pose_estimation_method: "pnp"
+
+    tag:
+      ids: [0, 1, 2, 3, 4, 5]
+      frames:
+        - cube_+x
+        - cube_-x
+        - cube_+y
+        - cube_-y
+        - cube_+z
+        - cube_-z
+      sizes: [0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
