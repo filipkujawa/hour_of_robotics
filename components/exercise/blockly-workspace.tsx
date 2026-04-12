@@ -6,7 +6,7 @@ import { pythonGenerator } from "blockly/python";
 import "blockly/blocks";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { githubGist } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box, Download, Upload, Camera } from "lucide-react";
+import { Play, Square, Wifi, Terminal, Code2, MessageCircle, CheckCircle2, Lightbulb, ChevronLeft, ChevronDown, Box, Download, Upload, Camera, Battery, BatteryLow, BatteryMedium, BatteryFull } from "lucide-react";
 
 import type { BlocklyExercise } from "@/lib/course-data";
 import { useRobot } from "@/lib/robot";
@@ -29,13 +29,13 @@ type WidgetId = "console" | "rerun" | "camera" | "python";
 type PaneId = "bottom" | "right";
 
 const DEFAULT_WIDGET_LAYOUT: Record<PaneId, WidgetId[]> = {
-  bottom: ["console", "rerun", "camera"],
-  right: ["python"],
+  bottom: ["rerun", "camera", "python"],
+  right: ["console"],
 };
 
 const DEFAULT_ACTIVE_WIDGET: Record<PaneId, WidgetId | null> = {
-  bottom: "console",
-  right: "python",
+  bottom: "rerun",
+  right: "console",
 };
 
 const WIDGET_META: Record<WidgetId, { label: string; icon: typeof Terminal }> = {
@@ -78,6 +78,7 @@ export function BlocklyWorkspace({
     isRunning,
     logs,
     armEstopped,
+    batteryPct,
     connect,
     disconnect,
     runWorkspace,
@@ -703,6 +704,12 @@ export function BlocklyWorkspace({
             <Wifi className="h-3 w-3 text-[#9c9c9a]" />
             <span className="text-[11px] text-[#9c9c9a]">{connectionStatus === "connected" ? "Connected" : connectionStatus === "connecting" ? "Connecting" : "Offline"}</span>
           </button>
+          {batteryPct !== null && (
+            <div className={`flex items-center gap-1 text-[11px] ${batteryPct <= 20 ? "text-red-500" : batteryPct <= 50 ? "text-amber-500" : "text-green-600"}`} title={`Battery: ${batteryPct}%`}>
+              {batteryPct <= 20 ? <BatteryLow className="h-3.5 w-3.5" /> : batteryPct <= 50 ? <BatteryMedium className="h-3.5 w-3.5" /> : <BatteryFull className="h-3.5 w-3.5" />}
+              {batteryPct}%
+            </div>
+          )}
           <div className="h-4 w-px bg-[#e2e1de]" />
           <button onClick={handleExport} className="text-[#9c9c9a] hover:text-[#6b6b69] p-1 rounded transition-colors" title="Export blocks">
             <Download className="h-3.5 w-3.5" />

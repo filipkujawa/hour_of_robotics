@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { RobotConnection, ConnectionStatus } from "./connection";
 import { BlockExecutor } from "./executor";
 import { DEFAULT_ROBOT_URL } from "./constants";
@@ -18,6 +18,7 @@ export function useRobot() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [armEstopped, setArmEstopped] = useState<boolean | null>(null);
   const [connectionUrl, setConnectionUrl] = useState(DEFAULT_ROBOT_URL);
+  const [batteryPct, setBatteryPct] = useState<number | null>(null);
 
   const robotRef = useRef<RobotConnection | null>(null);
   const executorRef = useRef<BlockExecutor | null>(null);
@@ -178,11 +179,27 @@ export function useRobot() {
     }
   }, [addLog]);
 
+  // Poll battery every 30 seconds when connected
+  useEffect(() => {
+    if (status !== "connected") { setBatteryPct(null); return; }
+    let cancelled = false;
+    const poll = async () => {
+      const robot = robotRef.current;
+      if (!robot || cancelled) return;
+      const pct = await robot.getBattery();
+      if (!cancelled && pct >= 0) setBatteryPct(pct);
+    };
+    poll();
+    const id = setInterval(poll, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [status]);
+
   return {
     status,
     isRunning,
     logs,
     armEstopped,
+    batteryPct,
     connectionUrl,
     connect,
     disconnect,

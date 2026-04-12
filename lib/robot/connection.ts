@@ -56,11 +56,7 @@ export class RobotConnection {
   private lastArmEstop: boolean | null = null;
   private armStateLastUpdate = 0;
 
-  // Persistent ArUco subscriptions (throttled to 2Hz)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private arucoHeadTopic: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private arucoArmTopic: any = null;
+  // Timestamps of last successful ArUco detection (for isTagDetected cache)
   private arucoHeadLastUpdate = 0;
   private arucoArmLastUpdate = 0;
 
@@ -98,8 +94,14 @@ export class RobotConnection {
       });
 
       this.ros.on("error", (error: Error) => {
+        const msg = error.message || "Could not reach robot";
+        // Malformed JSON from rosbridge (e.g. ArUco NaN poses) — don't kill the connection
+        if (msg.includes("Unexpected token") || msg.includes("not valid JSON")) {
+          // Silently ignore — the websocket is still alive, just a bad message
+          return;
+        }
         this.setStatus("error");
-        this.onError(`Connection error: ${error.message || "Could not reach robot"}`);
+        this.onError(`Connection error: ${msg}`);
         reject(error);
       });
 
@@ -132,10 +134,6 @@ export class RobotConnection {
     this.armStatusTopic = null;
     this.lastArmJoints = null;
     this.lastArmEstop = null;
-    try { this.arucoHeadTopic?.unsubscribe(); } catch { /* websocket may already be closed */ }
-    this.arucoHeadTopic = null;
-    try { this.arucoArmTopic?.unsubscribe(); } catch { /* websocket may already be closed */ }
-    this.arucoArmTopic = null;
   }
 
   private initTopicsAndServices(roslib: typeof import("roslib")) {
@@ -231,43 +229,9 @@ export class RobotConnection {
       serviceType: "std_srvs/Trigger",
     });
 
-    // Persistent ArUco subscriptions — throttled to 2Hz (every 500ms)
-    // throttle_rate tells rosbridge to drop messages server-side, reducing serialization load
-    this.arucoHeadTopic = new roslib.Topic({
-      ros: this.ros,
-      name: "/aruco_left/cube_pose",
-      messageType: "geometry_msgs/msg/PoseStamped",
-      throttle_rate: 500,
-      queue_length: 1,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.arucoHeadTopic.subscribe((message: any) => {
-      try {
-        const pos = message?.pose?.position;
-        if (!pos || typeof pos.x !== "number" || typeof pos.y !== "number" || typeof pos.z !== "number") return;
-        if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) return;
-        this.arucoHeadLastUpdate = Date.now();
-        this._processHeadTag(message);
-      } catch { /* drop malformed messages */ }
-    });
-
-    this.arucoArmTopic = new roslib.Topic({
-      ros: this.ros,
-      name: "/aruco/cube_pose",
-      messageType: "geometry_msgs/PoseStamped",
-      throttle_rate: 500,
-      queue_length: 1,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.arucoArmTopic.subscribe((message: any) => {
-      try {
-        const pos = message?.pose?.position;
-        if (!pos || typeof pos.x !== "number" || typeof pos.y !== "number" || typeof pos.z !== "number") return;
-        if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) return;
-        this.arucoArmLastUpdate = Date.now();
-        this._processArmTag(message);
-      } catch { /* drop malformed messages */ }
-    });
+    // ArUco topics are NOT subscribed persistently — only on-demand during tag reads.
+    // Persistent subscriptions crash the websocket when rosbridge serializes malformed
+    // PoseStamped messages with NaN/empty position fields (invalid JSON).
   }
 
   private parseArmEstop(message: Record<string, unknown>): boolean | null {
@@ -858,19 +822,54 @@ export class RobotConnection {
   }
 
   /**
-   * Read cached arm tag position. The persistent subscription updates the cache at 2Hz.
+   * On-demand arm tag read. Subscribes, grabs one valid message, unsubscribes.
+   * Falls back to cached value on timeout.
    */
   async getTagPoseArm(axis: string): Promise<number> {
-    const val = this.lastTagArm[axis];
-    if (val !== undefined) {
-      this.onLog(`Arm tag (from arm base): ${axis}=${val}`);
-      return val;
-    }
-    this.onLog("Arm tag — no detection yet");
-    return 0;
+    if (!this.ros) return this.lastTagArm[axis] ?? 0;
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/aruco/cube_pose",
+        messageType: "geometry_msgs/PoseStamped",
+      });
+
+      let resolved = false;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      topic.subscribe((message: any) => {
+        if (resolved) return;
+        try {
+          const pos = message?.pose?.position;
+          if (!pos || typeof pos.x !== "number" || typeof pos.y !== "number" || typeof pos.z !== "number") return;
+          if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) return;
+          resolved = true;
+          topic.unsubscribe();
+          this._processArmTag(message);
+          this.arucoArmLastUpdate = Date.now();
+          this.onLog(`Arm tag (from arm base): ${axis}=${this.lastTagArm[axis]}`);
+          resolve(this.lastTagArm[axis] ?? 0);
+        } catch { /* drop malformed */ }
+      });
+
+      setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        try { topic.unsubscribe(); } catch { /* already closed */ }
+        const last = this.lastTagArm[axis];
+        if (last !== undefined) {
+          this.onLog(`Arm tag timeout — using last known ${axis}=${last}`);
+          resolve(last);
+        } else {
+          this.onLog("Arm tag timeout — no detection");
+          resolve(0);
+        }
+      }, 2000);
+    });
   }
 
-  // Last known tag positions — updated by persistent subscriptions
+  // Last known tag positions — cached across reads
   private lastTagHead: Record<string, number> = {};
   private lastTagArm: Record<string, number> = {};
 
@@ -878,24 +877,76 @@ export class RobotConnection {
   private headTiltRad = 0;
 
   /**
-   * Read cached head tag position. The persistent subscription updates the cache at 2Hz.
+   * On-demand head tag read. Subscribes, grabs one valid message, unsubscribes.
+   * Falls back to cached value on timeout.
    */
   async getTagPoseHead(axis: string): Promise<number> {
-    const val = this.lastTagHead[axis];
-    if (val !== undefined) {
-      this.onLog(`Tag (from arm base): ${axis}=${val}`);
-      return val;
-    }
-    this.onLog("Tag — no detection yet");
-    return 0;
+    if (!this.ros) return this.lastTagHead[axis] ?? 0;
+    const roslib = await getRoslib();
+
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/aruco_left/cube_pose",
+        messageType: "geometry_msgs/msg/PoseStamped",
+      });
+
+      let resolved = false;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      topic.subscribe((message: any) => {
+        if (resolved) return;
+        try {
+          const pos = message?.pose?.position;
+          if (!pos || typeof pos.x !== "number" || typeof pos.y !== "number" || typeof pos.z !== "number") return;
+          if (isNaN(pos.x) || isNaN(pos.y) || isNaN(pos.z)) return;
+          resolved = true;
+          topic.unsubscribe();
+          this._processHeadTag(message);
+          this.arucoHeadLastUpdate = Date.now();
+          this.onLog(`Tag (from arm base): ${axis}=${this.lastTagHead[axis]}`);
+          resolve(this.lastTagHead[axis] ?? 0);
+        } catch { /* drop malformed */ }
+      });
+
+      setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        try { topic.unsubscribe(); } catch { /* already closed */ }
+        const last = this.lastTagHead[axis];
+        if (last !== undefined) {
+          this.onLog(`Tag timeout — using last known ${axis}=${last}`);
+          resolve(last);
+        } else {
+          this.onLog("Tag timeout — no detection");
+          resolve(0);
+        }
+      }, 3000);
+    });
   }
 
   async isTagDetected(): Promise<boolean> {
-    // Check if we have a recent detection from the persistent subscriptions
-    // "Recent" = within the last 2 seconds
+    // Check if we have a recent detection (within last 5 seconds)
     const headAge = Date.now() - this.arucoHeadLastUpdate;
     const armAge = Date.now() - this.arucoArmLastUpdate;
-    return headAge < 2000 || armAge < 2000;
+    if (headAge < 5000 || armAge < 5000) return true;
+
+    // No recent cache — do a quick on-demand check
+    if (!this.ros) return false;
+    const roslib = await getRoslib();
+    return new Promise((resolve) => {
+      const topic = new roslib.Topic({
+        ros: this.ros,
+        name: "/aruco/cube_faces",
+        messageType: "std_msgs/String",
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (message: any) => {
+        try { topic.unsubscribe(); } catch { /* */ }
+        resolve(typeof message.data === "string" && message.data.trim().length > 0);
+      };
+      topic.subscribe(handler);
+      setTimeout(() => { try { topic.unsubscribe(); } catch { /* */ } resolve(false); }, 2000);
+    });
   }
 
   async getAvailableSkills(): Promise<string[]> {
