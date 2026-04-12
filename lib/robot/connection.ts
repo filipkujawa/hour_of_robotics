@@ -150,7 +150,6 @@ export class RobotConnection {
     this.armStatusTopic = null;
     this.lastArmJoints = null;
     this.lastArmEstop = null;
-    this.stopGripperHold();
     this.armTorqueOffRequestedForEstop = false;
   }
 
@@ -396,7 +395,6 @@ export class RobotConnection {
     this.onLog("Stopping");
     this.cancelDriveHeadingSegment();
     this.cancelRotateDelta();
-    this.stopGripperHold();
     this.publishVelocity(0, 0);
   }
 
@@ -406,7 +404,6 @@ export class RobotConnection {
 
   async armGoToJoints(joints: number[], durationSeconds = 2.0): Promise<void> {
     if (!this.armService) return;
-    this.stopGripperHold();
 
     const jointTargets = joints.length > 6 ? joints.slice(0, 6) : joints;
     if (jointTargets.length !== 6) {
@@ -433,7 +430,6 @@ export class RobotConnection {
       -0.01227184630308513,
       0.04295146206079795,
     ], 2.0);
-    this.startGripperHold(0.0);
   }
 
   async wave(): Promise<void> {
@@ -450,7 +446,6 @@ export class RobotConnection {
     const joints = [...this.lastArmJoints];
     joints[5] = 0.85; // GRIPPER_OPEN
     await this.armGoToJoints(joints, 0.5);
-    this.startGripperHold(0.85);
   }
 
   async gripperClose(): Promise<void> {
@@ -462,7 +457,6 @@ export class RobotConnection {
     const joints = [...this.lastArmJoints];
     joints[5] = 0.0; // GRIPPER_CLOSED
     await this.armGoToJoints(joints, 0.5);
-    this.startGripperHold(0.0);
   }
 
   async pickUp(): Promise<void> {
@@ -511,8 +505,8 @@ export class RobotConnection {
     });
     service.callService(
       { data: clamped > 0 },
-      () => {},
-      () => {},
+      () => { },
+      () => { },
     );
   }
 
