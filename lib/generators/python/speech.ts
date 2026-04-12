@@ -29,6 +29,14 @@ export function registerSpeechGenerators() {
     return ["mars.listen()", Order.FUNCTION_CALL];
   };
 
+  pythonGenerator.forBlock["mars_text_contains"] = function (block) {
+    const text = pythonGenerator.valueToCode(block, "TEXT", Order.NONE) || '""';
+    const query = String(block.getFieldValue("QUERY") || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"');
+    return [`"${query}" in str(${text})`, Order.RELATIONAL];
+  };
+
   pythonGenerator.forBlock["mars_set_voice"] = function (block) {
     const voice = block.getFieldValue("VOICE");
     return `mars.set_voice("${voice.toLowerCase()}")\n`;

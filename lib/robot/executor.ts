@@ -629,15 +629,37 @@ export class BlockExecutor {
         return block.fields.BOOL === "TRUE";
 
       case "logic_compare": {
-        const a = await this.evaluateNumber(block.inputs.A || null);
-        const b = await this.evaluateNumber(block.inputs.B || null);
         switch (block.fields.OP) {
-          case "EQ": return a === b;
-          case "NEQ": return a !== b;
-          case "LT": return a < b;
-          case "LTE": return a <= b;
-          case "GT": return a > b;
-          case "GTE": return a >= b;
+          case "EQ": {
+            const a = await this.evaluateValue(block.inputs.A || null);
+            const b = await this.evaluateValue(block.inputs.B || null);
+            return a === b;
+          }
+          case "NEQ": {
+            const a = await this.evaluateValue(block.inputs.A || null);
+            const b = await this.evaluateValue(block.inputs.B || null);
+            return a !== b;
+          }
+          case "LT": {
+            const a = await this.evaluateNumber(block.inputs.A || null);
+            const b = await this.evaluateNumber(block.inputs.B || null);
+            return a < b;
+          }
+          case "LTE": {
+            const a = await this.evaluateNumber(block.inputs.A || null);
+            const b = await this.evaluateNumber(block.inputs.B || null);
+            return a <= b;
+          }
+          case "GT": {
+            const a = await this.evaluateNumber(block.inputs.A || null);
+            const b = await this.evaluateNumber(block.inputs.B || null);
+            return a > b;
+          }
+          case "GTE": {
+            const a = await this.evaluateNumber(block.inputs.A || null);
+            const b = await this.evaluateNumber(block.inputs.B || null);
+            return a >= b;
+          }
           default: return false;
         }
       }
@@ -653,6 +675,15 @@ export class BlockExecutor {
 
       case "math_number":
         return Number(block.fields.NUM) || 0;
+
+      case "text":
+        return String(block.fields.TEXT || "");
+
+      case "mars_text_contains": {
+        const text = String(await this.evaluateValue(block.inputs.TEXT || null) || "");
+        const query = String(block.fields.QUERY || "");
+        return text.includes(query);
+      }
 
       case "math_arithmetic": {
         const left = await this.evaluateNumber(block.inputs.A || null);
@@ -687,7 +718,7 @@ export class BlockExecutor {
 
       case "mars_listen":
         this.onLog("Listening for speech...");
-        return "";
+        return await this.robot.listen();
 
       case "mars_abs": {
         const val = await this.evaluateValue(block.inputs.VALUE || null);

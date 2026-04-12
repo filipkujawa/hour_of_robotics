@@ -90,6 +90,15 @@ export const toolboxConfig = {
         },
         { kind: "block", type: "mars_set_volume" },
         { kind: "block", type: "mars_listen" },
+        {
+          kind: "block",
+          type: "mars_text_contains",
+          inputs: {
+            TEXT: {
+              block: { type: "mars_listen" },
+            },
+          },
+        },
         { kind: "block", type: "mars_play_sound" },
       ],
     },

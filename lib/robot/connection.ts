@@ -54,6 +54,8 @@ export class RobotConnection {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private chatInTopic: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private activeInputsTopic: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private armTorqueOffService: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private armTorqueOnService: any = null;
@@ -143,6 +145,7 @@ export class RobotConnection {
     this.headTopic = null;
     this.ttsTopic = null;
     this.chatInTopic = null;
+    this.activeInputsTopic = null;
     this.armTorqueOffService = null;
     this.armTorqueOnService = null;
     this.armRebootService = null;
@@ -228,6 +231,12 @@ export class RobotConnection {
     this.chatInTopic = new roslib.Topic({
       ros: this.ros,
       name: "/brain/chat_in",
+      messageType: "std_msgs/String",
+    });
+
+    this.activeInputsTopic = new roslib.Topic({
+      ros: this.ros,
+      name: "/input_manager/active_inputs",
       messageType: "std_msgs/String",
     });
 
@@ -510,6 +519,52 @@ export class RobotConnection {
     );
   }
 
+  async listen(timeoutMs = 15000): Promise<string> {
+    if (!this.ros || !this.chatInTopic) return "";
+    const roslib = await getRoslib();
+    const listenStartedAtSec = Date.now() / 1000;
+
+    this.onLog("Speech input -> microphone");
+    this.setActiveInputs(["micro"]);
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const chatInTopic = new roslib.Topic({
+        ros: this.ros,
+        name: "/brain/chat_in",
+        messageType: "std_msgs/String",
+      });
+
+      const finish = (text: string) => {
+        if (settled) return;
+        settled = true;
+        chatInTopic.unsubscribe();
+        if (text) {
+          this.onLog(`Heard: "${text}"`);
+        } else {
+          this.onError("Speech input timed out");
+        }
+        resolve(text);
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (msg: any) => {
+        const parsed = this.parseChatEnvelope(msg?.data);
+        if (!parsed) return;
+        if (parsed.sender && parsed.sender !== "user") return;
+        if (typeof parsed.timestamp === "number" && parsed.timestamp < listenStartedAtSec) return;
+        if (!parsed.text) return;
+        finish(parsed.text);
+      };
+
+      chatInTopic.subscribe(handler);
+
+      window.setTimeout(() => {
+        finish("");
+      }, timeoutMs);
+    });
+  }
+
   // ==========================================
   // Lights
   // ==========================================
@@ -726,6 +781,40 @@ export class RobotConnection {
 
     this.onLog(`TTS: "${text}"`);
     this.ttsTopic.publish({ data: text });
+  }
+
+  private setActiveInputs(inputs: string[]) {
+    if (!this.activeInputsTopic) {
+      this.onError("Active inputs topic unavailable");
+      return;
+    }
+
+    const payload = JSON.stringify({ inputs });
+    this.activeInputsTopic.publish({ data: payload });
+  }
+
+  private parseChatEnvelope(
+    raw: unknown
+  ): { text: string; sender?: string; timestamp?: number } | null {
+    if (typeof raw !== "string") return null;
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        text?: unknown;
+        sender?: unknown;
+        timestamp?: unknown;
+      };
+
+      return {
+        text: typeof parsed.text === "string" ? parsed.text : "",
+        sender: typeof parsed.sender === "string" ? parsed.sender : undefined,
+        timestamp: typeof parsed.timestamp === "number" ? parsed.timestamp : undefined,
+      };
+    } catch {
+      return {
+        text: raw,
+      };
+    }
   }
 
   // ==========================================

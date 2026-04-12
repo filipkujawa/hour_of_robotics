@@ -58,6 +58,17 @@ const speechBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Returns text: what the microphone heard. Plug into say, print, if-comparisons, or variables.",
   },
   {
+    type: "mars_text_contains",
+    message0: "%1 contains %2",
+    args0: [
+      { type: "input_value", name: "TEXT", check: "String" },
+      { type: "field_input", name: "QUERY", text: "move" },
+    ],
+    output: "Boolean",
+    colour: "#fdcb6e",
+    tooltip: "Returns true if the text includes the given phrase.",
+  },
+  {
     type: "mars_set_voice",
     message0: "set voice to %1",
     args0: [
