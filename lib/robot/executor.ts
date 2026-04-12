@@ -20,6 +20,7 @@ export class BlockExecutor {
   private running = false;
   private onLog: (msg: string) => void;
   private speed = 50; // default speed percentage
+  private variables: Record<string, unknown> = {};
 
   constructor(robot: RobotConnection, onLog?: (msg: string) => void) {
     this.robot = robot;
@@ -68,6 +69,7 @@ export class BlockExecutor {
 
   async execute(blocks: BlockData[]): Promise<void> {
     this.running = true;
+    this.variables = {};
     this.onLog("--- Execution started ---");
 
     try {
@@ -419,30 +421,37 @@ export class BlockExecutor {
       // ---- Sensor store blocks ----
       case "mars_read_distance": {
         const dist = await this.robot.getDistance();
-        this.onLog(`Distance: ${dist}cm`);
-        // Store in executor context — the variable system handles this via Blockly
+        const distVar = String(block.fields.VAR || "distance");
+        this.variables[distVar] = dist;
+        this.onLog(`${distVar} = ${dist}cm`);
         break;
       }
 
       case "mars_read_heading": {
         const hdg = await this.robot.getHeading();
-        this.onLog(`Heading: ${hdg}°`);
+        const hdgVar = String(block.fields.VAR || "heading");
+        this.variables[hdgVar] = hdg;
+        this.onLog(`${hdgVar} = ${hdg}°`);
         break;
       }
 
       case "mars_read_battery": {
         const bat = await this.robot.getBattery();
-        this.onLog(`Battery: ${bat}%`);
+        const batVar = String(block.fields.VAR || "battery");
+        this.variables[batVar] = bat;
+        this.onLog(`${batVar} = ${bat}%`);
         break;
       }
 
       case "mars_read_tag": {
         const cam = String(block.fields.CAMERA || "ARM");
         const axis = String(block.fields.AXIS || "X");
+        const tagVar = String(block.fields.VAR || "tag_pos");
         const val = cam === "ARM"
           ? await this.robot.getTagPoseArm(axis)
           : await this.robot.getTagPoseHead(axis);
-        this.onLog(`Tag ${cam} ${axis}: ${val}`);
+        this.variables[tagVar] = val;
+        this.onLog(`${tagVar} = ${val}`);
         break;
       }
 
@@ -492,6 +501,15 @@ export class BlockExecutor {
         const instruction = String(block.fields.INSTRUCTION || "");
         this.onLog(`Driving to: "${instruction}"`);
         await this.robot.executeSkill("innate-os/navigate_with_vision", { instruction });
+        break;
+      }
+
+      // ---- Variables ----
+      case "variables_set": {
+        const varName = String(block.fields.VAR || "");
+        const varVal = await this.evaluateValue(block.inputs.VALUE || null);
+        this.variables[varName] = varVal;
+        this.onLog(`${varName} = ${varVal}`);
         break;
       }
 
@@ -682,6 +700,12 @@ export class BlockExecutor {
 
       case "mars_get_heading":
         return await this.robot.getHeading();
+
+      // ---- Variables ----
+      case "variables_get": {
+        const varName = String(block.fields.VAR || "");
+        return this.variables[varName] ?? 0;
+      }
 
       default:
         return 0;
