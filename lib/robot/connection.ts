@@ -8,6 +8,8 @@ export interface RobotConnectionOptions {
   onError?: (error: string) => void;
   onLog?: (message: string) => void;
   onArmEstopChange?: (estopped: boolean | null) => void;
+  /** `std_msgs/Float64MultiArray` [linear_m_s, duration_s] — same as `velocity_heading_controller` default */
+  driveHeadingCmdTopic?: string;
 }
 
 // Lazy-loaded ROSLIB module (client-only)
@@ -32,6 +34,10 @@ export class RobotConnection {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private cmdVelTopic: any = null;
+  /** Forward/back timed segments: Float64MultiArray [linear_m_s, duration_s] */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private driveHeadingCmdTopic: any = null;
+  private readonly driveHeadingCmdTopicName: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private armService: any = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +72,7 @@ export class RobotConnection {
     this.onError = options.onError || (() => {});
     this.onLog = options.onLog || (() => {});
     this.onArmEstopChange = options.onArmEstopChange || (() => {});
+    this.driveHeadingCmdTopicName = options.driveHeadingCmdTopic ?? "/mars/drive_heading";
   }
 
   get status(): ConnectionStatus {
@@ -122,6 +129,7 @@ export class RobotConnection {
 
   private cleanup() {
     this.cmdVelTopic = null;
+    this.driveHeadingCmdTopic = null;
     this.armService = null;
     this.lightService = null;
     this.headTopic = null;
@@ -143,6 +151,12 @@ export class RobotConnection {
       ros: this.ros,
       name: "/cmd_vel",
       messageType: "geometry_msgs/Twist",
+    });
+
+    this.driveHeadingCmdTopic = new roslib.Topic({
+      ros: this.ros,
+      name: this.driveHeadingCmdTopicName,
+      messageType: "std_msgs/Float64MultiArray",
     });
 
     this.armService = new roslib.Service({
@@ -276,25 +290,44 @@ export class RobotConnection {
     });
   }
 
+  /** Timed straight-line segment while holding current yaw (same idea as cmd_vel + duration in one message). */
+  private publishDriveHeading(linear: number, durationSec: number): void {
+    if (!this.driveHeadingCmdTopic) {
+      this.onError("Not connected");
+      return;
+    }
+    this.driveHeadingCmdTopic.publish({
+      layout: { dim: [], data_offset: 0 },
+      data: [linear, durationSec],
+    });
+  }
+
+  private cancelDriveHeadingSegment(): void {
+    if (!this.driveHeadingCmdTopic) return;
+    this.driveHeadingCmdTopic.publish({
+      layout: { dim: [], data_offset: 0 },
+      data: [0, 0],
+    });
+  }
+
   async moveForward(steps: number): Promise<void> {
     const speed = 0.2;
     const duration = steps * 0.5;
     this.onLog(`Moving forward ${steps} steps`);
-    this.publishVelocity(speed, 0);
+    this.publishDriveHeading(speed, duration);
     await this.sleep(duration * 1000);
-    this.publishVelocity(0, 0);
   }
 
   async moveBackward(steps: number): Promise<void> {
     const speed = -0.2;
     const duration = steps * 0.5;
     this.onLog(`Moving backward ${steps} steps`);
-    this.publishVelocity(speed, 0);
+    this.publishDriveHeading(speed, duration);
     await this.sleep(duration * 1000);
-    this.publishVelocity(0, 0);
   }
 
   async turn(direction: string, degrees: number): Promise<void> {
+    this.cancelDriveHeadingSegment();
     const angularSpeed = direction === "LEFT" ? 0.5 : -0.5;
     const duration = (degrees / 90) * 1.57;
     this.onLog(`Turning ${direction.toLowerCase()} ${degrees}deg`);
@@ -305,6 +338,7 @@ export class RobotConnection {
 
   stop() {
     this.onLog("Stopping");
+    this.cancelDriveHeadingSegment();
     this.publishVelocity(0, 0);
   }
 
