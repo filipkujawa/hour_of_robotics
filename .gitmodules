@@ -1,0 +1,3 @@
+[submodule "innate-os"]
+	path = innate-os
+	url = git@github.com:maxstrid/innate-os.git
