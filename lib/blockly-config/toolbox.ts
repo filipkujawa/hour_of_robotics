@@ -47,6 +47,9 @@ export const toolboxConfig = {
         { kind: "block", type: "mars_see_object" },
         { kind: "block", type: "mars_take_photo" },
         { kind: "block", type: "mars_get_object_position" },
+        { kind: "block", type: "mars_tag_detect_arm" },
+        { kind: "block", type: "mars_tag_detect_head" },
+        { kind: "block", type: "mars_is_tag_detected" },
         { kind: "block", type: "mars_get_battery" },
         { kind: "block", type: "mars_get_heading" },
       ],
@@ -105,6 +108,7 @@ export const toolboxConfig = {
       colour: "#636e72",
       contents: [
         { kind: "block", type: "mars_run_skill" },
+        { kind: "block", type: "mars_abs" },
         { kind: "block", type: "mars_random" },
         { kind: "block", type: "mars_wait" },
         { kind: "block", type: "mars_wait_until" },

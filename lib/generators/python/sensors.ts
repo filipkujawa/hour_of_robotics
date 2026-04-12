@@ -23,6 +23,20 @@ export function registerSensorGenerators() {
     ];
   };
 
+  pythonGenerator.forBlock["mars_tag_detect_arm"] = function (block) {
+    const axis = block.getFieldValue("AXIS");
+    return [`mars.tag_detect_arm("${axis.toLowerCase()}")`, Order.FUNCTION_CALL];
+  };
+
+  pythonGenerator.forBlock["mars_tag_detect_head"] = function (block) {
+    const axis = block.getFieldValue("AXIS");
+    return [`mars.tag_detect_head("${axis.toLowerCase()}")`, Order.FUNCTION_CALL];
+  };
+
+  pythonGenerator.forBlock["mars_is_tag_detected"] = function () {
+    return ["mars.is_tag_detected()", Order.FUNCTION_CALL];
+  };
+
   pythonGenerator.forBlock["mars_get_battery"] = function () {
     return ["mars.get_battery()", Order.FUNCTION_CALL];
   };

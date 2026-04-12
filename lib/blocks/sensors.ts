@@ -63,6 +63,49 @@ const sensorBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Get the x or y position of a detected object in the camera frame",
   },
   {
+    type: "mars_tag_detect_arm",
+    message0: "arm camera tag %1",
+    args0: [
+      {
+        type: "field_dropdown",
+        name: "AXIS",
+        options: [
+          ["x position", "X"],
+          ["y position", "Y"],
+          ["z position", "Z"],
+        ],
+      },
+    ],
+    output: "Number",
+    colour: "#0984e3",
+    tooltip: "Returns the X, Y, or Z position of a detected AprilTag from the arm camera",
+  },
+  {
+    type: "mars_tag_detect_head",
+    message0: "head camera tag %1",
+    args0: [
+      {
+        type: "field_dropdown",
+        name: "AXIS",
+        options: [
+          ["x position", "X"],
+          ["y position", "Y"],
+          ["z position", "Z"],
+        ],
+      },
+    ],
+    output: "Number",
+    colour: "#0984e3",
+    tooltip: "Returns the X or Z position of a detected AprilTag from the head camera",
+  },
+  {
+    type: "mars_is_tag_detected",
+    message0: "tag detected?",
+    output: "Boolean",
+    colour: "#0984e3",
+    tooltip: "Returns true if an AprilTag is currently detected by any camera",
+  },
+  {
     type: "mars_get_battery",
     message0: "battery %",
     output: "Number",

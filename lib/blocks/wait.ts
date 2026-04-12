@@ -43,6 +43,14 @@ const waitBlocks = Blockly.common.createBlockDefinitionsFromJsonArray([
     tooltip: "Pause for a number of seconds",
   },
   {
+    type: "mars_abs",
+    message0: "abs %1",
+    args0: [{ type: "input_value", name: "VALUE", check: "Number" }],
+    output: "Number",
+    colour: "#636e72",
+    tooltip: "Returns the absolute value of a number",
+  },
+  {
     type: "mars_random",
     message0: "random %1 to %2",
     args0: [

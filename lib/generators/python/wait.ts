@@ -13,6 +13,11 @@ export function registerWaitGenerators() {
     return `mars.run_skill("${escapedSkill}", ${params || "{}"})\n`;
   };
 
+  pythonGenerator.forBlock["mars_abs"] = function (block, generator) {
+    const value = generator.valueToCode(block, "VALUE", Order.NONE) || "0";
+    return [`abs(${value})`, Order.FUNCTION_CALL];
+  };
+
   pythonGenerator.forBlock["mars_random"] = function (block) {
     const min = block.getFieldValue("MIN");
     const max = block.getFieldValue("MAX");

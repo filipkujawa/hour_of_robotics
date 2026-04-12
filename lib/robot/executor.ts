@@ -454,6 +454,11 @@ export class BlockExecutor {
         this.onLog("Listening for speech...");
         return "";
 
+      case "mars_abs": {
+        const val = await this.evaluateValue(block.inputs.VALUE || null);
+        return Math.abs(Number(val) || 0);
+      }
+
       // ---- Random ----
       case "mars_random": {
         const min = Number(block.fields.MIN) || 0;
@@ -464,6 +469,26 @@ export class BlockExecutor {
       // ---- AI / Chat ----
       case "mars_chat_ask":
         return await this.robot.chatAsk(String(block.fields.MESSAGE || ""));
+
+      // ---- Tag detection ----
+      case "mars_tag_detect_arm": {
+        const axis = String(block.fields.AXIS || "X");
+        this.onLog(`Reading arm tag ${axis}...`);
+        // TODO: subscribe to actual tag detection topic
+        return 0;
+      }
+
+      case "mars_tag_detect_head": {
+        const axis = String(block.fields.AXIS || "X");
+        this.onLog(`Reading head tag ${axis}...`);
+        // TODO: subscribe to actual tag detection topic
+        return 0;
+      }
+
+      case "mars_is_tag_detected":
+        this.onLog("Checking for tags...");
+        // TODO: subscribe to actual tag detection topic
+        return false;
 
       // ---- Battery & Heading ----
       case "mars_get_battery":
