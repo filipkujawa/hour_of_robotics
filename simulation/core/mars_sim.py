@@ -49,6 +49,12 @@ class MarsSimulator:
             "models", 
             "mars_robot.urdf"
         )
+        self.cube_asset_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "models",
+            "assets",
+            "cube.gltf"
+        )
         
         # Initialize URDF tree
         self.urdf_tree = UrdfTree.from_file_path(self.urdf_path, entity_path_prefix="robot", frame_prefix="tf#robot/")
@@ -231,8 +237,29 @@ class MarsSimulator:
 
         # Log the URDF structure
         self.urdf_tree.log_urdf_to_recording(self.rec)
+        self.log_scene_assets()
         
         self.reset_state()
+
+    def log_scene_assets(self):
+        """Logs static props that should always appear in the scene."""
+        if not os.path.exists(self.cube_asset_path):
+            return
+
+        self.rec.log(
+            "props/cube",
+            rr.Transform3D(
+                translation=[0.35, 0.0, 0.02],
+                parent_frame="tf#/",
+                child_frame="tf#/props/cube"
+            ),
+            static=True
+        )
+        self.rec.log(
+            "props/cube",
+            rr.Asset3D(path=self.cube_asset_path),
+            static=True
+        )
 
     # Real home joint positions from the robot
     HOME_JOINTS = {
