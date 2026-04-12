@@ -7,6 +7,8 @@ type CameraFeed = {
   id: string;
   label: string;
   topic: string;
+  annotatedTopic: string | null;
+  annotationsEnabled: boolean;
   messageType: string | null;
   frame: string | null;
   format: string | null;
@@ -20,6 +22,8 @@ const DEFAULT_FEEDS: CameraFeed[] = [
     id: "left",
     label: "Left",
     topic: "/mars/main_camera/left/image_raw/compressed",
+    annotatedTopic: "/aruco_left/annotated",
+    annotationsEnabled: false,
     messageType: null,
     frame: null,
     format: null,
@@ -28,20 +32,11 @@ const DEFAULT_FEEDS: CameraFeed[] = [
     error: null,
   },
   {
-    id: "center",
+    id: "arm",
     label: "Arm",
     topic: "/mars/arm/image_raw/compressed",
-    messageType: null,
-    frame: null,
-    format: null,
-    lastUpdated: null,
-    status: "idle",
-    error: null,
-  },
-  {
-    id: "right",
-    label: "Right",
-    topic: "/mars/main_camera/right/image_raw",
+    annotatedTopic: "/aruco/annotated",
+    annotationsEnabled: false,
     messageType: null,
     frame: null,
     format: null,
@@ -317,8 +312,11 @@ export function CameraFeedWidget({
   const [sessionKey, setSessionKey] = useState(0);
   const [bridgeStatus, setBridgeStatus] = useState<"idle" | "connecting" | "connected" | "error">("idle");
   const [bridgeError, setBridgeError] = useState<string | null>(null);
-  const topicConfigs = feeds.map(({ id, topic }) => ({ id, topic }));
-  const topicSignature = JSON.stringify(topicConfigs);
+  const selectedFeed = feeds.find((feed) => feed.id === selectedFeedId) ?? feeds[0];
+  const selectedFeedTopic =
+    selectedFeed?.annotationsEnabled && selectedFeed.annotatedTopic
+      ? selectedFeed.annotatedTopic
+      : (selectedFeed?.topic ?? "");
 
   useEffect(() => {
     if (!active) return;
@@ -326,11 +324,11 @@ export function CameraFeedWidget({
     setFeeds((current) =>
       current.map((feed) => ({
         ...feed,
-        status: isRobotConnected ? "connecting" : "idle",
+        status: isRobotConnected && feed.id === selectedFeedId ? "connecting" : "idle",
         error: isRobotConnected ? null : feed.error,
       })),
     );
-  }, [active, isRobotConnected, sessionKey]);
+  }, [active, isRobotConnected, selectedFeedId, sessionKey]);
 
   useEffect(() => {
     if (!active || !isRobotConnected) {
@@ -362,26 +360,40 @@ export function CameraFeedWidget({
           setFeeds((current) =>
             current.map((feed) => ({
               ...feed,
-              status: "connecting",
-              error: null,
+              status: feed.id === selectedFeedId ? "connecting" : "idle",
+              error: feed.id === selectedFeedId ? null : feed.error,
             })),
           );
 
-          topicConfigs.forEach((feed) => {
-            nextRos.getTopicType(
-              feed.topic,
-              (resolvedType: string) => {
-                if (cancelled) return;
-                const messageType = normalizeTopicType(feed.topic, resolvedType || null);
-                subscribeToFeed(roslib, nextRos, feed, messageType, setFeeds, subscriptions, cancelledRef);
-              },
-              () => {
-                if (cancelled) return;
-                const fallbackType = normalizeTopicType(feed.topic, null);
-                subscribeToFeed(roslib, nextRos, feed, fallbackType, setFeeds, subscriptions, cancelledRef);
-              },
-            );
-          });
+          nextRos.getTopicType(
+            selectedFeedTopic,
+            (resolvedType: string) => {
+              if (cancelled) return;
+              const messageType = normalizeTopicType(selectedFeedTopic, resolvedType || null);
+              subscribeToFeed(
+                roslib,
+                nextRos,
+                { id: selectedFeedId, topic: selectedFeedTopic },
+                messageType,
+                setFeeds,
+                subscriptions,
+                cancelledRef,
+              );
+            },
+            () => {
+              if (cancelled) return;
+              const fallbackType = normalizeTopicType(selectedFeedTopic, null);
+              subscribeToFeed(
+                roslib,
+                nextRos,
+                { id: selectedFeedId, topic: selectedFeedTopic },
+                fallbackType,
+                setFeeds,
+                subscriptions,
+                cancelledRef,
+              );
+            },
+          );
         });
 
         nextRos.on("error", (error: unknown) => {
@@ -392,8 +404,8 @@ export function CameraFeedWidget({
           setFeeds((current) =>
             current.map((feed) => ({
               ...feed,
-              status: "error",
-              error: message,
+              status: feed.id === selectedFeedId ? "error" : "idle",
+              error: feed.id === selectedFeedId ? message : feed.error,
             })),
           );
         });
@@ -404,7 +416,7 @@ export function CameraFeedWidget({
           setFeeds((current) =>
             current.map((feed) => ({
               ...feed,
-              status: feed.frame ? "idle" : "connecting",
+              status: "idle",
             })),
           );
         });
@@ -424,9 +436,7 @@ export function CameraFeedWidget({
       subscriptions.forEach((subscription) => subscription.unsubscribe());
       ros?.close();
     };
-  }, [active, isRobotConnected, sessionKey, topicSignature, wsUrl]);
-
-  const selectedFeed = feeds.find((feed) => feed.id === selectedFeedId) ?? feeds[0];
+  }, [active, isRobotConnected, selectedFeedId, selectedFeedTopic, sessionKey, wsUrl]);
 
   const updateTopic = (id: string, topic: string) => {
     setFeeds((current) =>
@@ -439,7 +449,7 @@ export function CameraFeedWidget({
               frame: null,
               format: null,
               lastUpdated: null,
-              status: isRobotConnected ? "connecting" : "idle",
+              status: isRobotConnected && feed.id === selectedFeedId ? "connecting" : "idle",
               error: null,
             }
           : feed,
@@ -451,9 +461,28 @@ export function CameraFeedWidget({
     setSessionKey((current) => current + 1);
   };
 
+  const toggleAnnotations = () => {
+    setFeeds((current) =>
+      current.map((feed) =>
+        feed.id === selectedFeedId && feed.annotatedTopic
+          ? {
+              ...feed,
+              annotationsEnabled: !feed.annotationsEnabled,
+              messageType: null,
+              frame: null,
+              format: null,
+              lastUpdated: null,
+              status: isRobotConnected ? "connecting" : "idle",
+              error: null,
+            }
+          : feed,
+      ),
+    );
+  };
+
   return (
     <div className={`flex h-full flex-col overflow-hidden rounded-xl border border-[#e7e4de] bg-[#f7f5ef] ${className ?? ""}`}>
-      <div className="flex items-center justify-between border-b border-[#e7e4de] bg-[linear-gradient(135deg,#faf8f2_0%,#f2eee4_100%)] px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-[#e7e4de] bg-[linear-gradient(135deg,#faf8f2_0%,#f2eee4_100%)] px-4 py-3">
         <div>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8b7355]">
             <Camera className="h-3.5 w-3.5 text-[#d97706]" />
@@ -462,14 +491,45 @@ export function CameraFeedWidget({
           <p className="mt-1 text-[12px] text-[#6b6257]">
             {isRobotConnected
               ? bridgeStatus === "connected"
-                ? "Streaming compressed ROS image topics from MARS."
+                ? `Streaming the selected ${selectedFeed.label.toLowerCase()} camera from MARS.`
                 : bridgeStatus === "connecting"
-                  ? "Connecting to the ROS bridge for camera streams."
+                  ? `Connecting to the ROS bridge for the ${selectedFeed.label.toLowerCase()} camera.`
                   : bridgeError ?? "Waiting for camera bridge."
-              : "Connect to MARS to watch the live robot feeds."}
+              : "Connect to MARS to watch the selected live robot feed."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <label className="min-w-[140px]">
+            <span className="sr-only">Camera selector</span>
+            <select
+              value={selectedFeedId}
+              onChange={(event) => setSelectedFeedId(event.target.value)}
+              className="h-8 w-full rounded-full border border-[#e2dbcf] bg-white px-3 text-sm text-[#31281f] outline-none transition focus:border-[#d97706] focus:ring-2 focus:ring-[#d97706]/10"
+            >
+              {feeds.map((feed) => (
+                <option key={feed.id} value={feed.id}>
+                  {feed.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={toggleAnnotations}
+            disabled={!selectedFeed.annotatedTopic}
+            className={`flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-medium transition-colors ${
+              selectedFeed.annotatedTopic
+                ? selectedFeed.annotationsEnabled
+                  ? "border-[#d97706] bg-[#fff7ed] text-[#9a3412] hover:bg-[#ffedd5]"
+                  : "border-[#e2dbcf] bg-white text-[#5e5142] hover:bg-[#fbfaf7]"
+                : "cursor-not-allowed border-[#ece7de] bg-[#f7f3ec] text-[#b8aa96]"
+            }`}
+          >
+            ArUco
+            <span className="text-[10px] uppercase tracking-[0.08em]">
+              {selectedFeed.annotatedTopic ? (selectedFeed.annotationsEnabled ? "On" : "Off") : "N/A"}
+            </span>
+          </button>
           <button
             type="button"
             onClick={() => setShowSettings((current) => !current)}
@@ -501,13 +561,25 @@ export function CameraFeedWidget({
                 onChange={(event) => updateTopic(feed.id, event.target.value)}
                 className="w-full rounded-lg border border-[#e2dbcf] bg-[#fbfaf7] px-3 py-2 font-mono text-[11px] text-[#31281f] outline-none transition focus:border-[#d97706] focus:ring-2 focus:ring-[#d97706]/10"
               />
+              {feed.annotatedTopic ? (
+                <>
+                  <div className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9f8b74]">
+                    {feed.label} annotated topic
+                  </div>
+                  <input
+                    value={feed.annotatedTopic}
+                    readOnly
+                    className="w-full rounded-lg border border-[#ece7de] bg-[#f4efe7] px-3 py-2 font-mono text-[11px] text-[#7b6c59] outline-none"
+                  />
+                </>
+              ) : null}
             </label>
           ))}
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[minmax(0,1.8fr)_320px]">
-        <div className="relative min-h-0 overflow-hidden rounded-[20px] border border-[#e3ddd2] bg-[#171615] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="flex min-h-0 flex-1 flex-col p-3">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[#e3ddd2] bg-[#171615] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
           {selectedFeed.frame ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -537,51 +609,9 @@ export function CameraFeedWidget({
           <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] text-white/90 backdrop-blur">
             {formatAge(selectedFeed.lastUpdated)}
           </div>
-        </div>
-
-        <div className="grid min-h-0 gap-3">
-          {feeds.map((feed) => {
-            const isSelected = feed.id === selectedFeed.id;
-
-            return (
-              <button
-                key={feed.id}
-                type="button"
-                onClick={() => setSelectedFeedId(feed.id)}
-                className={`group flex min-h-[120px] flex-col overflow-hidden rounded-2xl border text-left transition-all ${
-                  isSelected
-                    ? "border-[#d97706] bg-white shadow-[0_10px_30px_rgba(217,119,6,0.12)]"
-                    : "border-[#e5dfd4] bg-white/80 hover:border-[#d8c8ac] hover:bg-white"
-                }`}
-              >
-                <div className="relative h-28 overflow-hidden bg-[#1b1a18]">
-                  {feed.frame ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={feed.frame}
-                      alt={`${feed.label} preview`}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[#8f7b67]">
-                      {feed.status === "error" ? <Camera className="h-5 w-5" /> : <Loader2 className="h-5 w-5 animate-spin" />}
-                    </div>
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/65 to-transparent" />
-                  <div className="absolute bottom-2 left-3 text-[11px] font-medium text-white">{feed.label}</div>
-                </div>
-                <div className="space-y-1 px-3 py-2">
-                  <p className="truncate font-mono text-[10px] text-[#8f7b67]">{feed.topic}</p>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-[#4f463c]">
-                      {getStatusLabel(feed)}
-                    </span>
-                    <span className="text-[#9a8c79]">{formatAge(feed.lastUpdated)}</span>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          <div className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] text-white/90 backdrop-blur">
+            {getStatusLabel(selectedFeed)}
+          </div>
         </div>
       </div>
     </div>
