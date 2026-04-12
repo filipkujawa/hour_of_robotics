@@ -80,7 +80,7 @@ export const toolboxConfig = {
           type: "mars_say_value",
           inputs: {
             TEXT: {
-              block: { type: "mars_chat_ask" },
+              block: { type: "mars_gemma_ask" },
             },
           },
         },
@@ -95,6 +95,7 @@ export const toolboxConfig = {
       colour: "#6c5ce7",
       contents: [
         { kind: "block", type: "mars_chat_ask" },
+        { kind: "block", type: "mars_gemma_ask" },
       ],
     },
     {

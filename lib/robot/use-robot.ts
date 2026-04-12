@@ -31,11 +31,9 @@ export function useRobot() {
     ].slice(-100)); // keep last 100 entries
   }, []);
 
-  const connect = useCallback(async (url?: string) => {
-    const resolvedUrl = url || DEFAULT_ROBOT_URL;
-    if (robotRef.current) {
-      robotRef.current.disconnect();
-    }
+  const ensureExecutor = useCallback((url?: string): RobotConnection => {
+    const resolvedUrl = url || connectionUrl || DEFAULT_ROBOT_URL;
+    if (robotRef.current && executorRef.current) return robotRef.current;
 
     const robot = new RobotConnection({
       url: resolvedUrl,
@@ -48,6 +46,17 @@ export function useRobot() {
     setConnectionUrl(resolvedUrl);
     robotRef.current = robot;
     executorRef.current = new BlockExecutor(robot, (msg) => addLog(msg, "info"));
+    return robot;
+  }, [addLog, connectionUrl]);
+
+  const connect = useCallback(async (url?: string) => {
+    const resolvedUrl = url || DEFAULT_ROBOT_URL;
+    if (robotRef.current) {
+      robotRef.current.disconnect();
+    }
+    robotRef.current = null;
+    executorRef.current = null;
+    const robot = ensureExecutor(resolvedUrl);
 
     try {
       await robot.connect();
@@ -55,7 +64,7 @@ export function useRobot() {
     } catch {
       addLog("Failed to connect. Is the robot on and reachable?", "error");
     }
-  }, [addLog]);
+  }, [addLog, ensureExecutor]);
 
   const disconnect = useCallback(() => {
     robotRef.current?.disconnect();
@@ -64,8 +73,9 @@ export function useRobot() {
   }, []);
 
   const runWorkspace = useCallback(async (workspace: unknown) => {
-    if (!executorRef.current || !robotRef.current) {
-      addLog("Not connected to robot", "error");
+    ensureExecutor();
+    if (!executorRef.current) {
+      addLog("Execution engine is not available", "error");
       return;
     }
 
@@ -83,7 +93,7 @@ export function useRobot() {
       addLog(`Execution error: ${err instanceof Error ? err.message : String(err)}`, "error");
     }
     setIsRunning(false);
-  }, [addLog]);
+  }, [addLog, ensureExecutor]);
 
   const stopExecution = useCallback(() => {
     executorRef.current?.stop();

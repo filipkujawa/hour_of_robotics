@@ -596,6 +596,51 @@ export class RobotConnection {
     });
   }
 
+  async gemmaAsk(prompt: string): Promise<string> {
+    this.onLog(`Asking Gemma: "${prompt}"`);
+
+    try {
+      const response = await fetch("/api/gemma", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        const errorBody = (await response.json().catch(() => null)) as { error?: string } | null;
+        const message = errorBody?.error || `Gemma request failed with status ${response.status}`;
+        this.onError(message);
+        return "";
+      }
+
+      if (!response.body) {
+        this.onError("Gemma service did not return a response body");
+        return "";
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+      }
+
+      fullText += decoder.decode();
+      const trimmed = fullText.trim();
+      this.onLog(`Gemma response: "${trimmed}"`);
+      return trimmed;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown Gemma error";
+      this.onError(`Gemma request failed: ${message}`);
+      return "";
+    }
+  }
+
   chatSay(text: string) {
     if (!this.ttsTopic) {
       this.onError("Not connected");

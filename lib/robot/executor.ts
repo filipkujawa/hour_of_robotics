@@ -683,6 +683,9 @@ export class BlockExecutor {
       case "mars_chat_ask":
         return await this.robot.chatAsk(String(block.fields.MESSAGE || ""));
 
+      case "mars_gemma_ask":
+        return await this.robot.gemmaAsk(String(block.fields.PROMPT || ""));
+
       // ---- Tag detection ----
       case "mars_tag_detect_arm": {
         const axis = String(block.fields.AXIS || "X");

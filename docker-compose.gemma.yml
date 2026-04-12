@@ -1,0 +1,28 @@
+services:
+  gemma:
+    image: ollama/ollama:latest
+    container_name: hour-of-robotics-gemma
+    ports:
+      - "11434:11434"
+    volumes:
+      - gemma-data:/root/.ollama
+    restart: unless-stopped
+
+  gemma-init:
+    image: ollama/ollama:latest
+    depends_on:
+      - gemma
+    environment:
+      OLLAMA_HOST: http://gemma:11434
+      GEMMA_MODEL: ${GEMMA_MODEL:-gemma3:1b}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until ollama list >/dev/null 2>&1; do
+          sleep 2
+        done
+        ollama pull "$GEMMA_MODEL"
+
+volumes:
+  gemma-data:

@@ -7,4 +7,9 @@ export function registerChatGenerators() {
     return [`mars.chat_ask("${escaped}")`, Order.FUNCTION_CALL];
   };
 
+  pythonGenerator.forBlock["mars_gemma_ask"] = function (block) {
+    const prompt = block.getFieldValue("PROMPT");
+    const escaped = prompt.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    return [`mars.gemma_ask("${escaped}")`, Order.FUNCTION_CALL];
+  };
 }
