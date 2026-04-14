@@ -226,3 +226,7 @@ The frontend connects to the MARS robot over WebSocket via rosbridge (default `w
 7. Watch the robot act and monitor logs in the console
 8. Optionally view the 3D simulation in the embedded Rerun viewer
 9. Complete the exercise and move to the next lesson
+
+## License
+
+Licensed under CC BY-NC
